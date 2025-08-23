@@ -1,7 +1,7 @@
-import { Home, Store, Heart, ShoppingCart, User, Search } from "lucide-react";
+import { Home, Store, Heart, ShoppingCart, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { LiveSearch } from "./LiveSearch";
 
 const navItems = [
   { id: "home", icon: Home, label: "Home", path: "/" },
