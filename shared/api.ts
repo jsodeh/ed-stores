@@ -1,12 +1,38 @@
 /**
  * Shared code between client and server
- * Useful to share types between client and server
- * and/or small pure JS functions that can be used on both client and server
+ * Types for ED Superstore ecommerce app
  */
 
-/**
- * Example response type for /api/demo
- */
 export interface DemoResponse {
   message: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  category: string;
+  isFavorite?: boolean;
+  description?: string;
+  stock?: number;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  location: string;
 }
