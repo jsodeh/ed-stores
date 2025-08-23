@@ -13,6 +13,8 @@ const navItems = [
 export function BottomNavigation() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { getCartItemCount } = useApp();
+  const cartCount = getCartItemCount();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden">
@@ -20,16 +22,23 @@ export function BottomNavigation() {
         {navItems.map((item) => {
           const IconComponent = item.icon;
           const isActive = location.pathname === item.path;
-          
+
           return (
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center py-3 px-2 ${
+              className={`flex flex-col items-center py-3 px-2 relative ${
                 isActive ? 'text-primary' : 'text-gray-400'
               }`}
             >
-              <IconComponent className="h-5 w-5 mb-1" />
+              <div className="relative">
+                <IconComponent className="h-5 w-5 mb-1" />
+                {item.id === 'cart' && cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-medium">{item.label}</span>
             </button>
           );
