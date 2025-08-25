@@ -31,8 +31,8 @@ export function LiveSearch({ className }: LiveSearchProps) {
 
   useEffect(() => {
     if (localQuery.trim()) {
-      const filtered = state.products.filter(product =>
-        product.name.toLowerCase().includes(localQuery.toLowerCase()) ||
+      const filtered = products.filter(product =>
+        product.name?.toLowerCase().includes(localQuery.toLowerCase()) ||
         product.description?.toLowerCase().includes(localQuery.toLowerCase())
       ).slice(0, 5); // Show top 5 suggestions
       setSuggestions(filtered);
@@ -41,7 +41,7 @@ export function LiveSearch({ className }: LiveSearchProps) {
       setSuggestions([]);
       setIsOpen(false);
     }
-  }, [localQuery, state.products]);
+  }, [localQuery, products]);
 
   const handleInputChange = (value: string) => {
     setLocalQuery(value);
