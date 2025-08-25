@@ -11,16 +11,16 @@ const categories = [
 ];
 
 export function Categories() {
-  const { setCategory, state } = useApp();
+  const { setSelectedCategory, selectedCategory } = useStore();
   const navigate = useNavigate();
 
   const handleCategoryClick = (categoryId: string) => {
-    setCategory(categoryId);
+    setSelectedCategory(categoryId);
     navigate('/store');
   };
 
   const handleViewAll = () => {
-    setCategory(null);
+    setSelectedCategory(null);
     navigate('/store');
   };
 
