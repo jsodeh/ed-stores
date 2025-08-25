@@ -206,32 +206,32 @@ export default function Store() {
                   onClick={() => handleProductClick(product)}
                 >
                   <div className="flex gap-4">
-                    <img 
-                      src={product.image}
-                      alt={product.name}
+                    <img
+                      src={product.image_url || '/placeholder.svg'}
+                      alt={product.name || ''}
                       className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
                     />
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
                           <Badge variant="secondary" className="mt-1 capitalize">
-                            {product.category}
+                            {product.category_name}
                           </Badge>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={(e) => handleToggleFavorite(product.id, e)}
+                          onClick={(e) => handleToggleFavorite(product.id!, e)}
                           className="text-gray-400 hover:text-red-500"
                         >
-                          <Heart 
+                          <Heart
                             className={`h-4 w-4 ${
-                              isFavorite(product.id) 
-                                ? 'fill-red-500 text-red-500' 
+                              isFavorite(product.id!)
+                                ? 'fill-red-500 text-red-500'
                                 : 'text-gray-400'
-                            }`} 
+                            }`}
                           />
                         </Button>
                       </div>
