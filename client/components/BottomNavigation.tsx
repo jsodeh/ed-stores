@@ -1,6 +1,6 @@
 import { Home, Store, Heart, ShoppingCart, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 
 const navItems = [
   { id: "home", icon: Home, label: "Home", path: "/" },
