@@ -50,35 +50,35 @@ export function ProductGrid() {
               onClick={() => handleProductClick(product)}
             >
               <div className="relative mb-3">
-                <img 
-                  src={product.image}
-                  alt={product.name}
+                <img
+                  src={product.image_url || '/placeholder.svg'}
+                  alt={product.name || ''}
                   className="w-full h-32 object-cover rounded-xl"
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 hover:bg-white"
-                  onClick={(e) => handleToggleFavorite(product.id, e)}
+                  onClick={(e) => handleToggleFavorite(product.id!, e)}
                 >
-                  <Heart 
+                  <Heart
                     className={`h-4 w-4 ${
-                      isFavorite(product.id) 
-                        ? 'fill-red-500 text-red-500' 
+                      isFavorite(product.id!)
+                        ? 'fill-red-500 text-red-500'
                         : 'text-gray-400'
-                    }`} 
+                    }`}
                   />
                 </Button>
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-gray-900 mb-1">{product.name}</h4>
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-semibold text-gray-900">
                     {formatPrice(product.price)}
                   </span>
-                  <Button 
-                    size="icon" 
+                  <Button
+                    size="icon"
                     className="w-8 h-8 rounded-full bg-primary hover:bg-primary/90"
                     onClick={(e) => handleAddToCart(product, e)}
                   >
