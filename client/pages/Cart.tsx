@@ -89,33 +89,33 @@ export default function Cart() {
             {cartItems.map((item) => (
               <div key={item.product.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex gap-4">
-                  <img 
-                    src={item.product.image}
-                    alt={item.product.name}
+                  <img
+                    src={item.products?.image_url || '/placeholder.svg'}
+                    alt={item.products?.name || ''}
                     className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
                   />
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="font-semibold text-gray-900">{item.product.name}</h3>
+                        <h3 className="font-semibold text-gray-900">{item.products?.name}</h3>
                         <Badge variant="secondary" className="mt-1 capitalize">
-                          {item.product.category}
+                          {item.products?.category_name}
                         </Badge>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(item.products?.id!)}
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="text-lg font-bold text-primary">
-                        {formatPrice(item.product.price)}
+                        {formatPrice(item.products?.price || 0)}
                       </div>
                       
                       <div className="flex items-center gap-3">
