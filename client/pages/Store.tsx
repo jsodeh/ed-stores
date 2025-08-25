@@ -86,9 +86,9 @@ export default function Store() {
             {categories.map((category) => (
               <Button
                 key={category.id || 'all'}
-                variant={state.selectedCategory === category.id ? "default" : "outline"}
+                variant={selectedCategory === category.id ? "default" : "outline"}
                 size="sm"
-                onClick={() => setCategory(category.id)}
+                onClick={() => setSelectedCategory(category.id)}
                 className={`whitespace-nowrap ${
                   state.selectedCategory === category.id 
                     ? 'bg-primary text-white' 
