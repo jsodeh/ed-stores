@@ -13,8 +13,8 @@ const navItems = [
 export function BottomNavigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { getCartItemCount } = useApp();
-  const cartCount = getCartItemCount();
+  const { cartItemCount } = useStore();
+  const cartCount = cartItemCount;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden">
