@@ -6,10 +6,10 @@ import { LiveSearch } from "@/components/LiveSearch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, ArrowLeft, SlidersHorizontal, Grid3X3, List } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Product } from "@shared/api";
+import { Product } from "@shared/database.types";
 
 const categories = [
   { id: null, name: "All", color: "bg-gray-100" },
