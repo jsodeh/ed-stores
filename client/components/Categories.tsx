@@ -36,7 +36,7 @@ export function Categories() {
       <div className="grid grid-cols-4 gap-4">
         {categories.map((category) => {
           const IconComponent = category.icon;
-          const isSelected = state.selectedCategory === category.id;
+          const isSelected = selectedCategory === category.id;
           return (
             <button
               key={category.id}
