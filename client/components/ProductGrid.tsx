@@ -1,9 +1,9 @@
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 import { ProductModal } from "./ProductModal";
-import { Product } from "@shared/api";
+import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
   const { getFilteredProducts, addToCart, toggleFavorite, isFavorite } = useApp();
