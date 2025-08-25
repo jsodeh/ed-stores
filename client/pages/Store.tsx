@@ -90,8 +90,8 @@ export default function Store() {
                 size="sm"
                 onClick={() => setSelectedCategory(category.id)}
                 className={`whitespace-nowrap ${
-                  state.selectedCategory === category.id 
-                    ? 'bg-primary text-white' 
+                  selectedCategory === category.id
+                    ? 'bg-primary text-white'
                     : 'border-gray-200 hover:bg-gray-50'
                 }`}
               >
