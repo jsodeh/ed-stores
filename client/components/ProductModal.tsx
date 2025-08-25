@@ -47,23 +47,23 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
         <div className="space-y-4">
           {/* Product Image */}
           <div className="relative">
-            <img 
-              src={product.image}
-              alt={product.name}
+            <img
+              src={product.image_url || '/placeholder.svg'}
+              alt={product.name || ''}
               className="w-full h-64 object-cover rounded-xl"
             />
             <Button
               variant="ghost"
               size="icon"
               className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/80 hover:bg-white"
-              onClick={() => toggleFavorite(product.id)}
+              onClick={() => toggleFavorite(product.id!)}
             >
-              <Heart 
+              <Heart
                 className={`h-5 w-5 ${
-                  isFavorite(product.id) 
-                    ? 'fill-red-500 text-red-500' 
+                  isFavorite(product.id!)
+                    ? 'fill-red-500 text-red-500'
                     : 'text-gray-400'
-                }`} 
+                }`}
               />
             </Button>
           </div>
@@ -74,16 +74,16 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">{product.name}</h2>
                 <Badge variant="secondary" className="mt-1 capitalize">
-                  {product.category}
+                  {product.category_name}
                 </Badge>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-primary">
                   {formatPrice(product.price)}
                 </div>
-                {product.stock && (
+                {product.stock_quantity && (
                   <div className="text-sm text-gray-500">
-                    {product.stock} in stock
+                    {product.stock_quantity} in stock
                   </div>
                 )}
               </div>
