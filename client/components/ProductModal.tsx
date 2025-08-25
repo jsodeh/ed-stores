@@ -30,11 +30,11 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
     onClose();
   };
 
-  const formatPrice = (price: number) => {
-    return `₦${price.toLocaleString()}.00`;
+  const formatPrice = (price: number | null) => {
+    return `₦${(price || 0).toLocaleString()}.00`;
   };
 
-  const existingCartItem = state.cart.find(item => item.product.id === product.id);
+  const existingCartItem = cartItems.find(item => item.products?.id === product?.id);
   const cartQuantity = existingCartItem?.quantity || 0;
 
   return (
