@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 export default function Cart() {
-  const { state, updateQuantity, removeFromCart, getCartTotal, clearCart } = useApp();
+  const { cartItems, updateCartQuantity, removeFromCart, cartTotal, clearCart } = useStore();
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
