@@ -36,8 +36,8 @@ export default function Profile() {
   const userStats = {
     totalOrders: 12,
     totalSpent: 485000,
-    favoriteItems: state.favorites.length,
-    cartItems: getCartItemCount(),
+    favoriteItems: favoriteProducts.length,
+    cartItems: cartItemCount,
   };
 
   const recentOrders = [
