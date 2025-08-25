@@ -6,11 +6,11 @@ import { ProductModal } from "./ProductModal";
 import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
-  const { getFilteredProducts, addToCart, toggleFavorite, isFavorite } = useApp();
+  const { filteredProducts, addToCart, toggleFavorite, isFavorite } = useStore();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const products = getFilteredProducts().slice(0, 8); // Show first 8 products on homepage
+  const products = filteredProducts.slice(0, 8); // Show first 8 products on homepage
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
