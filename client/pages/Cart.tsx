@@ -28,11 +28,10 @@ export default function Cart() {
     // In a real app, you would integrate with a payment provider
   };
 
-  const cartTotal = getCartTotal();
   const deliveryFee = cartTotal > 50000 ? 0 : 2500; // Free delivery over ₦50,000
   const finalTotal = cartTotal + deliveryFee;
 
-  if (state.cart.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <DesktopNavigation />
