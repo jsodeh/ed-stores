@@ -79,7 +79,7 @@ export default function Cart() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">
-            Shopping Cart ({state.cart.length} item{state.cart.length !== 1 ? 's' : ''})
+            Shopping Cart ({cartItems.length} item{cartItems.length !== 1 ? 's' : ''})
           </h1>
         </div>
 
