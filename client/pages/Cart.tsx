@@ -123,7 +123,7 @@ export default function Cart() {
                           variant="outline"
                           size="icon"
                           className="w-8 h-8"
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() => updateCartQuantity(item.products?.id!, item.quantity - 1)}
                           disabled={item.quantity <= 1}
                         >
                           <Minus className="h-4 w-4" />
@@ -135,16 +135,16 @@ export default function Cart() {
                           variant="outline"
                           size="icon"
                           className="w-8 h-8"
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() => updateCartQuantity(item.products?.id!, item.quantity + 1)}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="mt-2 text-right">
                       <span className="text-sm text-gray-600">
-                        Subtotal: {formatPrice(item.product.price * item.quantity)}
+                        Subtotal: {formatPrice((item.products?.price || 0) * item.quantity)}
                       </span>
                     </div>
                   </div>
