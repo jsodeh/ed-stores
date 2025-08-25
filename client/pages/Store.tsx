@@ -20,13 +20,11 @@ const categories = [
 ];
 
 export default function Store() {
-  const { state, setCategory, addToCart, toggleFavorite, isFavorite, getFilteredProducts } = useApp();
+  const { selectedCategory, setSelectedCategory, addToCart, toggleFavorite, isFavorite, filteredProducts } = useStore();
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
-  const filteredProducts = getFilteredProducts();
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
