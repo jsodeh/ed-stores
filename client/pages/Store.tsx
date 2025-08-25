@@ -122,11 +122,8 @@ export default function Store() {
         <div className="flex items-center justify-between mb-4">
           <p className="text-gray-600">
             {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
-            {state.selectedCategory && (
-              <span> in <Badge variant="secondary" className="ml-1 capitalize">{state.selectedCategory}</Badge></span>
-            )}
-            {state.searchQuery && (
-              <span> for "<span className="font-medium">{state.searchQuery}</span>"</span>
+            {selectedCategory && (
+              <span> in <Badge variant="secondary" className="ml-1 capitalize">{selectedCategory}</Badge></span>
             )}
           </p>
         </div>
