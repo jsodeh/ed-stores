@@ -7,8 +7,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Minus, Plus, ShoppingCart } from "lucide-react";
-import { Product } from "@shared/api";
-import { useApp } from "@/contexts/AppContext";
+import { Product } from "@shared/database.types";
+import { useStore } from "@/contexts/StoreContext";
 import { useState } from "react";
 
 interface ProductModalProps {
@@ -18,7 +18,7 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
-  const { addToCart, toggleFavorite, isFavorite, isInCart, state } = useApp();
+  const { addToCart, toggleFavorite, isFavorite, cartItems } = useStore();
   const [quantity, setQuantity] = useState(1);
 
   if (!product) return null;
