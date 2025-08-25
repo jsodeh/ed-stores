@@ -15,9 +15,7 @@ export default function Favorites() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const favoriteProducts = state.products.filter(product => 
-    state.favorites.includes(product.id)
-  );
+  // favoriteProducts already comes from the store
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
