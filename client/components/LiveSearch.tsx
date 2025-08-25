@@ -1,10 +1,10 @@
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Product } from "@shared/api";
+import { Product } from "@shared/database.types";
 
 interface LiveSearchProps {
   className?: string;
