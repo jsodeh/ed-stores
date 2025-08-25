@@ -138,11 +138,10 @@ export default function Store() {
             <p className="text-gray-600 mb-4">
               Try adjusting your search or filter criteria
             </p>
-            <Button 
+            <Button
               variant="outline"
               onClick={() => {
-                setCategory(null);
-                // setSearchQuery(''); // Could clear search too
+                setSelectedCategory(null);
               }}
             >
               Clear Filters
