@@ -22,11 +22,11 @@ import {
   Edit,
   Star
 } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 
 export default function Profile() {
-  const { state, getCartItemCount } = useApp();
+  const { cartItemCount, favoriteProducts } = useStore();
   const navigate = useNavigate();
 
   const formatPrice = (price: number) => {
