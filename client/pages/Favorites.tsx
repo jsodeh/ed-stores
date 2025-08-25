@@ -4,13 +4,13 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { ProductModal } from "@/components/ProductModal";
 import { Button } from "@/components/ui/button";
 import { Heart, ArrowLeft } from "lucide-react";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Product } from "@shared/api";
+import { Product } from "@shared/database.types";
 
 export default function Favorites() {
-  const { state, addToCart, toggleFavorite, isFavorite } = useApp();
+  const { favoriteProducts, addToCart, toggleFavorite, isFavorite } = useStore();
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
