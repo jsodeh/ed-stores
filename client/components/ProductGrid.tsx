@@ -27,8 +27,8 @@ export function ProductGrid() {
     toggleFavorite(productId);
   };
 
-  const formatPrice = (price: number) => {
-    return `₦${price.toLocaleString()}.00`;
+  const formatPrice = (price: number | null) => {
+    return `₦${(price || 0).toLocaleString()}.00`;
   };
 
   if (products.length === 0) {
