@@ -11,9 +11,9 @@ interface LiveSearchProps {
 }
 
 export function LiveSearch({ className }: LiveSearchProps) {
-  const { state, setSearchQuery, setCategory } = useApp();
+  const { searchQuery, setSearchQuery, setSelectedCategory, products } = useStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [localQuery, setLocalQuery] = useState(state.searchQuery);
+  const [localQuery, setLocalQuery] = useState(searchQuery);
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
