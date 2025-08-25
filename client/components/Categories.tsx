@@ -1,6 +1,6 @@
 import { ShoppingCart, Cake, Carrot, Beef } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/contexts/AppContext";
+import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 
 const categories = [
