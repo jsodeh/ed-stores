@@ -125,13 +125,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const loadInitialData = async () => {
     setLoading(true);
+    console.log('🚀 Loading initial data...');
+
     try {
       await Promise.all([
         refreshProducts(),
         refreshCategories()
       ]);
+      console.log('✅ Initial data loaded successfully');
     } catch (error) {
-      console.error('Error loading initial data:', error);
+      console.error('❌ Failed to load initial data:', error);
     } finally {
       setLoading(false);
     }
