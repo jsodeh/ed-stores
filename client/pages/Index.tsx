@@ -6,6 +6,7 @@ import { Categories } from "@/components/Categories";
 import { ProductGrid } from "@/components/ProductGrid";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { DebugPanel } from "@/components/DebugPanel";
+import { TestConnection } from "@/components/TestConnection";
 
 export default function Index() {
   return (
@@ -44,6 +45,7 @@ export default function Index() {
 
       <BottomNavigation />
       <DebugPanel />
+      <TestConnection />
     </div>
   );
 }

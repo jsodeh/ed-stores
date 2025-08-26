@@ -97,17 +97,24 @@ export const products = {
   // Get all products
   getAll: async () => {
     try {
+      console.log('🔍 Calling supabase.rpc("get_product_details")...');
       const { data, error } = await supabase
         .rpc('get_product_details')
 
+      console.log('📦 Products RPC Response:', {
+        dataLength: data?.length,
+        error,
+        firstItem: data?.[0]
+      });
+
       if (error) {
-        console.error('Products API Error:', error)
+        console.error('❌ Products API Error:', error)
         throw error
       }
 
       return { data: data || [], error: null }
     } catch (err) {
-      console.error('Products fetch error:', err)
+      console.error('❌ Products fetch error:', err)
       return { data: [], error: err }
     }
   },
@@ -151,20 +158,27 @@ export const categories = {
   // Get all categories
   getAll: async () => {
     try {
+      console.log('🔍 Calling supabase.from("categories").select...');
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
 
+      console.log('📂 Categories Response:', {
+        dataLength: data?.length,
+        error,
+        firstItem: data?.[0]
+      });
+
       if (error) {
-        console.error('Categories API Error:', error)
+        console.error('❌ Categories API Error:', error)
         throw error
       }
 
       return { data: data || [], error: null }
     } catch (err) {
-      console.error('Categories fetch error:', err)
+      console.error('❌ Categories fetch error:', err)
       return { data: [], error: err }
     }
   }
