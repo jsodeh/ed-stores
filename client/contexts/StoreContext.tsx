@@ -71,16 +71,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadInitialData();
   }, []);
 
-  // Debug current state
-  useEffect(() => {
-    console.log('📦 Store state update:', {
-      loading,
-      productsCount: productsData.length,
-      categoriesCount: categoriesData.length,
-      cartItemsCount: cartItems.length,
-      favoritesCount: favoriteProducts.length
-    });
-  }, [loading, productsData.length, categoriesData.length, cartItems.length, favoriteProducts.length]);
 
   // Load user-specific data when authenticated
   useEffect(() => {
@@ -133,12 +123,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      // Load products and categories sequentially to better debug any issues
-      await refreshProducts();
-      await refreshCategories();
-      console.log('✅ Initial data load completed');
+      await Promise.all([
+        refreshProducts(),
+        refreshCategories()
+      ]);
     } catch (error) {
-      console.error('❌ Failed to load initial data:', error);
+      console.error('Failed to load initial data:', error);
     } finally {
       setLoading(false);
     }
@@ -146,16 +136,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshProducts = async () => {
     try {
-      console.log('🔄 Fetching products...');
       const { data, error } = await products.getAll();
       if (error) {
-        console.error('❌ Error loading products:', error);
+        console.error('Error loading products:', error);
         throw error;
       }
-      console.log('✅ Products loaded:', data?.length || 0, 'products');
       setProductsData(data || []);
     } catch (error) {
-      console.error('❌ Error loading products:', error);
+      console.error('Error loading products:', error);
       // Set empty array on error to avoid infinite loading
       setProductsData([]);
     }
@@ -163,16 +151,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshCategories = async () => {
     try {
-      console.log('🔄 Fetching categories...');
       const { data, error } = await categories.getAll();
       if (error) {
-        console.error('❌ Error loading categories:', error);
+        console.error('Error loading categories:', error);
         throw error;
       }
-      console.log('✅ Categories loaded:', data?.length || 0, 'categories');
       setCategoriesData(data || []);
     } catch (error) {
-      console.error('❌ Error loading categories:', error);
+      console.error('Error loading categories:', error);
       // Set empty array on error to avoid infinite loading
       setCategoriesData([]);
     }
@@ -294,17 +280,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return true;
   });
 
-  // Debug log for filtered products (only log when data changes)
-  useEffect(() => {
-    if (productsData.length > 0) {
-      console.log('🔍 Filtered products update:', {
-        total: productsData.length,
-        filtered: filteredProducts.length,
-        searchQuery,
-        selectedCategory
-      });
-    }
-  }, [productsData.length, filteredProducts.length, searchQuery, selectedCategory]);
 
   const cartTotal = cartItems.reduce((total, item) => {
     return total + (item.products?.price || 0) * item.quantity;
