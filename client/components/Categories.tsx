@@ -1,21 +1,13 @@
-import { ShoppingCart, Cake, Carrot, Beef } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 
-const categories = [
-  { id: "grocery", name: "Grocery", icon: ShoppingCart, color: "bg-primary" },
-  { id: "bakery", name: "Bakery", icon: Cake, color: "bg-pink-100" },
-  { id: "veggies", name: "Veggies", icon: Carrot, color: "bg-green-100" },
-  { id: "meat", name: "Meat", icon: Beef, color: "bg-red-100" },
-];
-
 export function Categories() {
-  const { setSelectedCategory, selectedCategory } = useStore();
+  const { setSelectedCategory, selectedCategory, categories } = useStore();
   const navigate = useNavigate();
 
-  const handleCategoryClick = (categoryId: string) => {
-    setSelectedCategory(categoryId);
+  const handleCategoryClick = (categorySlug: string) => {
+    setSelectedCategory(categorySlug);
     navigate('/store');
   };
 
