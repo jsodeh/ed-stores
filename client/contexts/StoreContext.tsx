@@ -135,20 +135,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const refreshProducts = async () => {
     try {
       const { data, error } = await products.getAll();
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading products - Details:', JSON.stringify(error, null, 2));
+        throw error;
+      }
       setProductsData(data || []);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error('Error loading products - Full error:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     }
   };
 
   const refreshCategories = async () => {
     try {
       const { data, error } = await categories.getAll();
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading categories - Details:', JSON.stringify(error, null, 2));
+        throw error;
+      }
       setCategoriesData(data || []);
     } catch (error) {
-      console.error('Error loading categories:', error);
+      console.error('Error loading categories - Full error:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     }
   };
 
