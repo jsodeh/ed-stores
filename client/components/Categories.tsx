@@ -25,24 +25,26 @@ export function Categories() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-3">
         {categories.map((category) => {
-          const IconComponent = category.icon;
-          const isSelected = selectedCategory === category.id;
+          const isSelected = selectedCategory === category.slug;
           return (
             <button
               key={category.id}
               className={`flex flex-col items-center p-3 rounded-2xl transition-colors ${
                 isSelected ? 'bg-primary/10' : 'hover:bg-gray-50'
               }`}
-              onClick={() => handleCategoryClick(category.id)}
+              onClick={() => handleCategoryClick(category.slug || '')}
             >
-              <div className={`w-12 h-12 rounded-2xl ${category.color} flex items-center justify-center mb-2`}>
-                <IconComponent
-                  className={`h-6 w-6 ${category.id === 'grocery' ? 'text-white' : 'text-gray-600'}`}
-                />
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-2 text-white text-lg"
+                style={{ backgroundColor: category.color || '#F59E0B' }}
+              >
+                {category.icon || '📦'}
               </div>
-              <span className="text-xs font-medium text-gray-700">{category.name}</span>
+              <span className="text-xs font-medium text-gray-700 text-center line-clamp-2">
+                {category.name}
+              </span>
             </button>
           );
         })}
