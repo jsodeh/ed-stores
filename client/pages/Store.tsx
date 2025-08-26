@@ -10,6 +10,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Product } from "@shared/database.types";
+import { DebugPanel } from "@/components/DebugPanel";
 
 export default function Store() {
   const {
@@ -290,6 +291,7 @@ export default function Store() {
       </main>
       
       <BottomNavigation />
+      <DebugPanel />
 
       <ProductModal
         product={selectedProduct}
