@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { AdminPage } from "@/components/admin/AdminLayout";
+import { ProductForm } from "@/components/admin/ProductForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
 import { Product } from "@shared/database.types";
 import {
@@ -20,6 +23,9 @@ export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     loadProducts();
@@ -51,6 +57,45 @@ export default function AdminProducts() {
     return `₦${price.toLocaleString()}.00`;
   };
 
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (product: Product) => {
+    setDeletingProduct(product);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingProduct) return;
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', deletingProduct.id);
+
+      if (error) throw error;
+      await loadProducts();
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Error deleting product. Please try again.');
+    } finally {
+      setDeletingProduct(null);
+    }
+  };
+
+  const handleFormSave = async () => {
+    setShowForm(false);
+    setEditingProduct(null);
+    await loadProducts();
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingProduct(null);
+  };
+
   if (loading) {
     return (
       <AdminPage title="Products Management">
@@ -75,7 +120,13 @@ export default function AdminProducts() {
               className="pl-10"
             />
           </div>
-          <Button className="bg-primary hover:bg-primary/90">
+          <Button
+            onClick={() => {
+              setEditingProduct(null);
+              setShowForm(true);
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Product
           </Button>
@@ -182,10 +233,18 @@ export default function AdminProducts() {
                       </td>
                       <td className="p-2">
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(product)}
+                          >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(product)}
+                          >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
@@ -198,6 +257,35 @@ export default function AdminProducts() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Product Form Dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <ProductForm
+            product={editingProduct}
+            onSave={handleFormSave}
+            onCancel={handleFormCancel}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingProduct?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminPage>
   );
 }
