@@ -6,7 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
 import { Product } from "@shared/database.types";
 import {
@@ -16,7 +25,7 @@ import {
   Trash2,
   Package,
   Eye,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 
 export default function AdminProducts() {
@@ -35,22 +44,23 @@ export default function AdminProducts() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('product_details')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .from("product_details")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
       setProducts(data || []);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error("Error loading products:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = products.filter(
+    (product) =>
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sku?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const formatPrice = (price: number) => {
@@ -71,15 +81,15 @@ export default function AdminProducts() {
 
     try {
       const { error } = await supabase
-        .from('products')
+        .from("products")
         .delete()
-        .eq('id', deletingProduct.id);
+        .eq("id", deletingProduct.id);
 
       if (error) throw error;
       await loadProducts();
     } catch (error) {
-      console.error('Error deleting product:', error);
-      alert('Error deleting product. Please try again.');
+      console.error("Error deleting product:", error);
+      alert("Error deleting product. Please try again.");
     } finally {
       setDeletingProduct(null);
     }
@@ -145,26 +155,34 @@ export default function AdminProducts() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Active Products</p>
-                  <p className="text-2xl font-bold">{products.filter(p => p.is_active).length}</p>
+                  <p className="text-2xl font-bold">
+                    {products.filter((p) => p.is_active).length}
+                  </p>
                 </div>
                 <Eye className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Low Stock</p>
                   <p className="text-2xl font-bold">
-                    {products.filter(p => (p.stock_quantity || 0) < (p.low_stock_threshold || 10)).length}
+                    {
+                      products.filter(
+                        (p) =>
+                          (p.stock_quantity || 0) <
+                          (p.low_stock_threshold || 10),
+                      ).length
+                    }
                   </p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -197,14 +215,16 @@ export default function AdminProducts() {
                     <tr key={product.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <div className="flex items-center gap-3">
-                          <img 
-                            src={product.image_url || '/placeholder.svg'} 
-                            alt={product.name || ''}
+                          <img
+                            src={product.image_url || "/placeholder.svg"}
+                            alt={product.name || ""}
                             className="w-10 h-10 object-cover rounded"
                           />
                           <div>
                             <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-gray-600">{product.sku}</p>
+                            <p className="text-sm text-gray-600">
+                              {product.sku}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -215,20 +235,27 @@ export default function AdminProducts() {
                         <Badge variant="outline">{product.category_name}</Badge>
                       </td>
                       <td className="p-2">
-                        <span className="font-semibold">{formatPrice(product.price || 0)}</span>
+                        <span className="font-semibold">
+                          {formatPrice(product.price || 0)}
+                        </span>
                       </td>
                       <td className="p-2">
-                        <span className={`font-medium ${
-                          (product.stock_quantity || 0) < (product.low_stock_threshold || 10) 
-                            ? 'text-red-600' 
-                            : 'text-green-600'
-                        }`}>
+                        <span
+                          className={`font-medium ${
+                            (product.stock_quantity || 0) <
+                            (product.low_stock_threshold || 10)
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }`}
+                        >
                           {product.stock_quantity}
                         </span>
                       </td>
                       <td className="p-2">
-                        <Badge variant={product.is_active ? "default" : "secondary"}>
-                          {product.is_active ? 'Active' : 'Inactive'}
+                        <Badge
+                          variant={product.is_active ? "default" : "secondary"}
+                        >
+                          {product.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </td>
                       <td className="p-2">
@@ -270,17 +297,24 @@ export default function AdminProducts() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
+      <AlertDialog
+        open={!!deletingProduct}
+        onOpenChange={() => setDeletingProduct(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Product</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingProduct?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{deletingProduct?.name}"? This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

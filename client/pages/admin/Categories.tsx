@@ -6,7 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
 import { Category } from "@shared/database.types";
 import {
@@ -17,7 +26,7 @@ import {
   Tags,
   Eye,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
 } from "lucide-react";
 
 export default function AdminCategories() {
@@ -26,7 +35,9 @@ export default function AdminCategories() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(
+    null,
+  );
 
   useEffect(() => {
     loadCategories();
@@ -36,22 +47,23 @@ export default function AdminCategories() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true });
-      
+        .from("categories")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
       if (error) throw error;
       setCategories(data || []);
     } catch (error) {
-      console.error('Error loading categories:', error);
+      console.error("Error loading categories:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredCategories = categories.filter(category =>
-    category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    category.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCategories = categories.filter(
+    (category) =>
+      category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.description?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleEdit = (category: Category) => {
@@ -68,15 +80,15 @@ export default function AdminCategories() {
 
     try {
       const { error } = await supabase
-        .from('categories')
+        .from("categories")
         .delete()
-        .eq('id', deletingCategory.id);
+        .eq("id", deletingCategory.id);
 
       if (error) throw error;
       await loadCategories();
     } catch (error) {
-      console.error('Error deleting category:', error);
-      alert('Error deleting category. Please try again.');
+      console.error("Error deleting category:", error);
+      alert("Error deleting category. Please try again.");
     } finally {
       setDeletingCategory(null);
     }
@@ -93,11 +105,15 @@ export default function AdminCategories() {
     setEditingCategory(null);
   };
 
-  const updateSortOrder = async (categoryId: string, direction: 'up' | 'down') => {
-    const currentIndex = categories.findIndex(c => c.id === categoryId);
+  const updateSortOrder = async (
+    categoryId: string,
+    direction: "up" | "down",
+  ) => {
+    const currentIndex = categories.findIndex((c) => c.id === categoryId);
     if (currentIndex === -1) return;
 
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    const targetIndex =
+      direction === "up" ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= categories.length) return;
 
     const currentCategory = categories[currentIndex];
@@ -106,18 +122,18 @@ export default function AdminCategories() {
     try {
       await Promise.all([
         supabase
-          .from('categories')
+          .from("categories")
           .update({ sort_order: targetCategory.sort_order })
-          .eq('id', currentCategory.id),
+          .eq("id", currentCategory.id),
         supabase
-          .from('categories')
+          .from("categories")
           .update({ sort_order: currentCategory.sort_order })
-          .eq('id', targetCategory.id)
+          .eq("id", targetCategory.id),
       ]);
 
       await loadCategories();
     } catch (error) {
-      console.error('Error updating sort order:', error);
+      console.error("Error updating sort order:", error);
     }
   };
 
@@ -170,25 +186,29 @@ export default function AdminCategories() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Active Categories</p>
-                  <p className="text-2xl font-bold">{categories.filter(c => c.is_active).length}</p>
+                  <p className="text-2xl font-bold">
+                    {categories.filter((c) => c.is_active).length}
+                  </p>
                 </div>
                 <Eye className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Inactive Categories</p>
-                  <p className="text-2xl font-bold">{categories.filter(c => !c.is_active).length}</p>
+                  <p className="text-2xl font-bold">
+                    {categories.filter((c) => !c.is_active).length}
+                  </p>
                 </div>
                 <Tags className="h-8 w-8 text-gray-600" />
               </div>
@@ -219,14 +239,22 @@ export default function AdminCategories() {
                     <tr key={category.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm">{category.sort_order}</span>
+                          <span className="font-mono text-sm">
+                            {category.sort_order}
+                          </span>
                           <div className="flex flex-col gap-1">
                             <Button
                               variant="outline"
                               size="sm"
                               className="w-6 h-6 p-0"
-                              onClick={() => updateSortOrder(category.id!, 'up')}
-                              disabled={categories.findIndex(c => c.id === category.id) === 0}
+                              onClick={() =>
+                                updateSortOrder(category.id!, "up")
+                              }
+                              disabled={
+                                categories.findIndex(
+                                  (c) => c.id === category.id,
+                                ) === 0
+                              }
                             >
                               <ArrowUp className="h-3 w-3" />
                             </Button>
@@ -234,8 +262,15 @@ export default function AdminCategories() {
                               variant="outline"
                               size="sm"
                               className="w-6 h-6 p-0"
-                              onClick={() => updateSortOrder(category.id!, 'down')}
-                              disabled={categories.findIndex(c => c.id === category.id) === categories.length - 1}
+                              onClick={() =>
+                                updateSortOrder(category.id!, "down")
+                              }
+                              disabled={
+                                categories.findIndex(
+                                  (c) => c.id === category.id,
+                                ) ===
+                                categories.length - 1
+                              }
                             >
                               <ArrowDown className="h-3 w-3" />
                             </Button>
@@ -244,15 +279,19 @@ export default function AdminCategories() {
                       </td>
                       <td className="p-2">
                         <div className="flex items-center gap-3">
-                          <div 
+                          <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                            style={{ backgroundColor: category.color || '#F59E0B' }}
+                            style={{
+                              backgroundColor: category.color || "#F59E0B",
+                            }}
                           >
                             {category.name?.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
                             <p className="font-medium">{category.name}</p>
-                            <p className="text-sm text-gray-600">{category.icon}</p>
+                            <p className="text-sm text-gray-600">
+                              {category.icon}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -263,12 +302,14 @@ export default function AdminCategories() {
                       </td>
                       <td className="p-2">
                         <span className="text-sm text-gray-600">
-                          {category.description || 'No description'}
+                          {category.description || "No description"}
                         </span>
                       </td>
                       <td className="p-2">
-                        <Badge variant={category.is_active ? "default" : "secondary"}>
-                          {category.is_active ? 'Active' : 'Inactive'}
+                        <Badge
+                          variant={category.is_active ? "default" : "secondary"}
+                        >
+                          {category.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </td>
                       <td className="p-2">
@@ -310,17 +351,24 @@ export default function AdminCategories() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingCategory} onOpenChange={() => setDeletingCategory(null)}>
+      <AlertDialog
+        open={!!deletingCategory}
+        onOpenChange={() => setDeletingCategory(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingCategory?.name}"? This will also affect all products in this category.
+              Are you sure you want to delete "{deletingCategory?.name}"? This
+              will also affect all products in this category.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -6,7 +6,8 @@ import { ProductModal } from "./ProductModal";
 import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
-  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading } = useStore();
+  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading } =
+    useStore();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -46,7 +47,9 @@ export function ProductGrid() {
     return (
       <div className="mx-4 mb-20 text-center py-8">
         <p className="text-gray-500">No products found</p>
-        <p className="text-sm text-gray-400 mt-2">Try adjusting your search or filter criteria</p>
+        <p className="text-sm text-gray-400 mt-2">
+          Try adjusting your search or filter criteria
+        </p>
       </div>
     );
   }
@@ -56,35 +59,37 @@ export function ProductGrid() {
       <div className="mx-4 mb-20">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map((product) => (
-            <div 
-              key={product.id} 
+            <div
+              key={product.id}
               className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => handleProductClick(product)}
             >
               <div className="relative mb-3">
                 <img
-                  src={product.image_url || '/placeholder.svg'}
-                  alt={product.name || ''}
+                  src={product.image_url || "/placeholder.svg"}
+                  alt={product.name || ""}
                   className="w-full h-32 object-cover rounded-xl"
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 hover:bg-white"
-                  onClick={(e) => handleToggleFavorite(product.id || '', e)}
+                  onClick={(e) => handleToggleFavorite(product.id || "", e)}
                 >
                   <Heart
                     className={`h-4 w-4 ${
-                      isFavorite(product.id || '')
-                        ? 'fill-red-500 text-red-500'
-                        : 'text-gray-400'
+                      isFavorite(product.id || "")
+                        ? "fill-red-500 text-red-500"
+                        : "text-gray-400"
                     }`}
                   />
                 </Button>
               </div>
 
               <div>
-                <h4 className="font-medium text-gray-900 mb-1 text-sm">{product.name || 'Unnamed Product'}</h4>
+                <h4 className="font-medium text-gray-900 mb-1 text-sm">
+                  {product.name || "Unnamed Product"}
+                </h4>
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-semibold text-gray-900">
                     {formatPrice(product.price)}

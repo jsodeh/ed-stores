@@ -31,9 +31,15 @@ export default function Index() {
               <div className="bg-white rounded-2xl p-6 mb-6">
                 <h3 className="font-semibold mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">Track Your Order</button>
-                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">Help & Support</button>
-                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">My Account</button>
+                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">
+                    Track Your Order
+                  </button>
+                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">
+                    Help & Support
+                  </button>
+                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">
+                    My Account
+                  </button>
                 </div>
               </div>
             </div>

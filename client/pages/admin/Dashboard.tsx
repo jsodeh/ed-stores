@@ -13,7 +13,7 @@ import {
   TrendingDown,
   DollarSign,
   Eye,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -53,42 +53,47 @@ export default function AdminDashboard() {
         recentOrdersResult,
         lowStockResult,
         recentUsersResult,
-        orderStatsResult
+        orderStatsResult,
       ] = await Promise.all([
-        supabase.from('user_profiles').select('id').eq('role', 'customer'),
-        supabase.from('products').select('id'),
-        supabase.from('orders').select('total_amount'),
+        supabase.from("user_profiles").select("id").eq("role", "customer"),
+        supabase.from("products").select("id"),
+        supabase.from("orders").select("total_amount"),
         supabase
-          .from('order_details')
-          .select('*')
-          .order('created_at', { ascending: false })
+          .from("order_details")
+          .select("*")
+          .order("created_at", { ascending: false })
           .limit(5),
         supabase
-          .from('products')
-          .select('id, name, stock_quantity, low_stock_threshold')
-          .lt('stock_quantity', 'low_stock_threshold')
+          .from("products")
+          .select("id, name, stock_quantity, low_stock_threshold")
+          .lt("stock_quantity", "low_stock_threshold")
           .limit(5),
         supabase
-          .from('user_profiles')
-          .select('id, full_name, email, created_at, role')
-          .order('created_at', { ascending: false })
+          .from("user_profiles")
+          .select("id, full_name, email, created_at, role")
+          .order("created_at", { ascending: false })
           .limit(5),
-        supabase
-          .from('orders')
-          .select('status')
+        supabase.from("orders").select("status"),
       ]);
 
       // Calculate stats
       const totalUsers = usersResult.data?.length || 0;
       const totalProducts = productsResult.data?.length || 0;
       const totalOrders = ordersResult.data?.length || 0;
-      const totalRevenue = ordersResult.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+      const totalRevenue =
+        ordersResult.data?.reduce(
+          (sum, order) => sum + (order.total_amount || 0),
+          0,
+        ) || 0;
 
       // Order stats by status
-      const ordersByStatus = orderStatsResult.data?.reduce((acc: any, order) => {
-        acc[order.status] = (acc[order.status] || 0) + 1;
-        return acc;
-      }, {});
+      const ordersByStatus = orderStatsResult.data?.reduce(
+        (acc: any, order) => {
+          acc[order.status] = (acc[order.status] || 0) + 1;
+          return acc;
+        },
+        {},
+      );
 
       const dashboardStats: DashboardStats = {
         totalUsers,
@@ -103,12 +108,12 @@ export default function AdminDashboard() {
           confirmed: ordersByStatus?.confirmed || 0,
           delivered: ordersByStatus?.delivered || 0,
           cancelled: ordersByStatus?.cancelled || 0,
-        }
+        },
       };
 
       setStats(dashboardStats);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error("Error loading dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -119,10 +124,10 @@ export default function AdminDashboard() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -145,7 +150,9 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Users
+                  </p>
                   <p className="text-2xl font-bold">{stats?.totalUsers}</p>
                 </div>
                 <Users className="h-8 w-8 text-blue-600" />
@@ -157,7 +164,9 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Products</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Products
+                  </p>
                   <p className="text-2xl font-bold">{stats?.totalProducts}</p>
                 </div>
                 <Package className="h-8 w-8 text-green-600" />
@@ -169,7 +178,9 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Orders
+                  </p>
                   <p className="text-2xl font-bold">{stats?.totalOrders}</p>
                 </div>
                 <ShoppingCart className="h-8 w-8 text-orange-600" />
@@ -181,8 +192,12 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold">{formatPrice(stats?.totalRevenue || 0)}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Revenue
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {formatPrice(stats?.totalRevenue || 0)}
+                  </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-purple-600" />
               </div>
@@ -198,19 +213,27 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">{stats?.orderStats.pending}</div>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {stats?.orderStats.pending}
+                </div>
                 <div className="text-sm text-gray-600">Pending</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats?.orderStats.confirmed}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {stats?.orderStats.confirmed}
+                </div>
                 <div className="text-sm text-gray-600">Confirmed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats?.orderStats.delivered}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {stats?.orderStats.delivered}
+                </div>
                 <div className="text-sm text-gray-600">Delivered</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{stats?.orderStats.cancelled}</div>
+                <div className="text-2xl font-bold text-red-600">
+                  {stats?.orderStats.cancelled}
+                </div>
                 <div className="text-sm text-gray-600">Cancelled</div>
               </div>
             </div>
@@ -229,22 +252,35 @@ export default function AdminDashboard() {
                   <div className="text-center py-8 text-gray-500">
                     <ShoppingCart className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                     <p>No orders yet</p>
-                    <p className="text-sm">Orders will appear here once customers start purchasing</p>
+                    <p className="text-sm">
+                      Orders will appear here once customers start purchasing
+                    </p>
                   </div>
                 ) : (
                   stats?.recentOrders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between border-b pb-2">
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between border-b pb-2"
+                    >
                       <div>
                         <p className="font-medium">{order.order_number}</p>
-                        <p className="text-sm text-gray-600">{order.customer_name}</p>
+                        <p className="text-sm text-gray-600">
+                          {order.customer_name}
+                        </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{formatPrice(order.total_amount)}</p>
+                        <p className="font-semibold">
+                          {formatPrice(order.total_amount)}
+                        </p>
                         <Badge
                           variant={
-                            order.status === 'delivered' ? 'default' :
-                            order.status === 'pending' ? 'secondary' :
-                            order.status === 'cancelled' ? 'destructive' : 'outline'
+                            order.status === "delivered"
+                              ? "default"
+                              : order.status === "pending"
+                                ? "secondary"
+                                : order.status === "cancelled"
+                                  ? "destructive"
+                                  : "outline"
                           }
                           className="text-xs"
                         >
@@ -269,10 +305,15 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {stats?.lowStockProducts.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">All products are well stocked!</p>
+                  <p className="text-gray-500 text-center py-4">
+                    All products are well stocked!
+                  </p>
                 ) : (
                   stats?.lowStockProducts.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between border-b pb-2">
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between border-b pb-2"
+                    >
                       <div>
                         <p className="font-medium">{product.name}</p>
                         <p className="text-sm text-gray-600">
@@ -300,17 +341,26 @@ export default function AdminDashboard() {
                   <div className="text-center py-8 text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                     <p>No customers yet</p>
-                    <p className="text-sm">Customer registrations will appear here</p>
+                    <p className="text-sm">
+                      Customer registrations will appear here
+                    </p>
                   </div>
                 ) : (
                   stats?.recentUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between border-b pb-2">
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between border-b pb-2"
+                    >
                       <div>
-                        <p className="font-medium">{user.full_name || 'Unnamed User'}</p>
+                        <p className="font-medium">
+                          {user.full_name || "Unnamed User"}
+                        </p>
                         <p className="text-sm text-gray-600">{user.email}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-600">{formatDate(user.created_at)}</p>
+                        <p className="text-sm text-gray-600">
+                          {formatDate(user.created_at)}
+                        </p>
                         <Badge variant="outline" className="text-xs">
                           {user.role}
                         </Badge>
@@ -330,7 +380,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <Button
-                  onClick={() => navigate('/admin/products')}
+                  onClick={() => navigate("/admin/products")}
                   className="h-12"
                   variant="outline"
                 >
@@ -338,7 +388,7 @@ export default function AdminDashboard() {
                   Manage Products
                 </Button>
                 <Button
-                  onClick={() => navigate('/admin/categories')}
+                  onClick={() => navigate("/admin/categories")}
                   className="h-12"
                   variant="outline"
                 >
@@ -346,7 +396,7 @@ export default function AdminDashboard() {
                   Manage Categories
                 </Button>
                 <Button
-                  onClick={() => window.open('/', '_blank')}
+                  onClick={() => window.open("/", "_blank")}
                   className="h-12"
                   variant="outline"
                 >
