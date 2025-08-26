@@ -15,6 +15,7 @@ import {
   Eye,
   AlertTriangle
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardStats {
   totalUsers: number;
@@ -35,6 +36,7 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadDashboardData();
@@ -223,27 +225,35 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {stats?.recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between border-b pb-2">
-                    <div>
-                      <p className="font-medium">{order.order_number}</p>
-                      <p className="text-sm text-gray-600">{order.customer_name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{formatPrice(order.total_amount)}</p>
-                      <Badge 
-                        variant={
-                          order.status === 'delivered' ? 'default' :
-                          order.status === 'pending' ? 'secondary' :
-                          order.status === 'cancelled' ? 'destructive' : 'outline'
-                        }
-                        className="text-xs"
-                      >
-                        {order.status}
-                      </Badge>
-                    </div>
+                {stats?.recentOrders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <ShoppingCart className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>No orders yet</p>
+                    <p className="text-sm">Orders will appear here once customers start purchasing</p>
                   </div>
-                ))}
+                ) : (
+                  stats?.recentOrders.map((order) => (
+                    <div key={order.id} className="flex items-center justify-between border-b pb-2">
+                      <div>
+                        <p className="font-medium">{order.order_number}</p>
+                        <p className="text-sm text-gray-600">{order.customer_name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">{formatPrice(order.total_amount)}</p>
+                        <Badge
+                          variant={
+                            order.status === 'delivered' ? 'default' :
+                            order.status === 'pending' ? 'secondary' :
+                            order.status === 'cancelled' ? 'destructive' : 'outline'
+                          }
+                          className="text-xs"
+                        >
+                          {order.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -286,20 +296,28 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {stats?.recentUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between border-b pb-2">
-                    <div>
-                      <p className="font-medium">{user.full_name || 'Unnamed User'}</p>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">{formatDate(user.created_at)}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {user.role}
-                      </Badge>
-                    </div>
+                {stats?.recentUsers.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>No customers yet</p>
+                    <p className="text-sm">Customer registrations will appear here</p>
                   </div>
-                ))}
+                ) : (
+                  stats?.recentUsers.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between border-b pb-2">
+                      <div>
+                        <p className="font-medium">{user.full_name || 'Unnamed User'}</p>
+                        <p className="text-sm text-gray-600">{user.email}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">{formatDate(user.created_at)}</p>
+                        <Badge variant="outline" className="text-xs">
+                          {user.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
