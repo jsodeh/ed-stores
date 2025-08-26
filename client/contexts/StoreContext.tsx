@@ -3,6 +3,11 @@ import { supabase, products, categories, cart, favorites } from '@/lib/supabase'
 import { useAuth } from './AuthContext';
 import { Product, Category, CartItem } from '@shared/database.types';
 
+// Import test utility in development
+if (import.meta.env.DEV) {
+  import('@/lib/test-api');
+}
+
 interface CartItemWithProduct extends CartItem {
   products: Product;
 }
