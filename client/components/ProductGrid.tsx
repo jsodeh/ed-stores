@@ -12,12 +12,6 @@ export function ProductGrid() {
 
   const products = filteredProducts.slice(0, 8); // Show first 8 products on homepage
 
-  console.log('🎨 ProductGrid render:', {
-    loading,
-    totalFilteredProducts: filteredProducts.length,
-    displayedProducts: products.length
-  });
-
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
