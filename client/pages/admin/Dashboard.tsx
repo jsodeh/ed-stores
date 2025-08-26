@@ -328,16 +328,28 @@ export default function AdminDashboard() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <Button className="w-full" variant="outline">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Button
+                  onClick={() => navigate('/admin/products')}
+                  className="h-12"
+                  variant="outline"
+                >
                   <Package className="h-4 w-4 mr-2" />
-                  Add New Product
+                  Manage Products
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button
+                  onClick={() => navigate('/admin/categories')}
+                  className="h-12"
+                  variant="outline"
+                >
                   <BarChart3 className="h-4 w-4 mr-2" />
-                  View Analytics
+                  Manage Categories
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button
+                  onClick={() => window.open('/', '_blank')}
+                  className="h-12"
+                  variant="outline"
+                >
                   <Eye className="h-4 w-4 mr-2" />
                   View Store
                 </Button>
