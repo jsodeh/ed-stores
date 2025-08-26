@@ -6,11 +6,17 @@ import { ProductModal } from "./ProductModal";
 import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
-  const { filteredProducts, addToCart, toggleFavorite, isFavorite } = useStore();
+  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading } = useStore();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const products = filteredProducts.slice(0, 8); // Show first 8 products on homepage
+
+  console.log('🎨 ProductGrid render:', {
+    loading,
+    totalFilteredProducts: filteredProducts.length,
+    displayedProducts: products.length
+  });
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -31,10 +37,22 @@ export function ProductGrid() {
     return `₦${(price || 0).toLocaleString()}.00`;
   };
 
+  if (loading) {
+    return (
+      <div className="mx-4 mb-20 text-center py-8">
+        <div className="flex justify-center items-center space-x-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-gray-500">Loading products...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (products.length === 0) {
     return (
       <div className="mx-4 mb-20 text-center py-8">
         <p className="text-gray-500">No products found</p>
+        <p className="text-sm text-gray-400 mt-2">Try adjusting your search or filter criteria</p>
       </div>
     );
   }
@@ -59,11 +77,11 @@ export function ProductGrid() {
                   variant="ghost"
                   size="icon"
                   className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 hover:bg-white"
-                  onClick={(e) => handleToggleFavorite(product.id!, e)}
+                  onClick={(e) => handleToggleFavorite(product.id || '', e)}
                 >
                   <Heart
                     className={`h-4 w-4 ${
-                      isFavorite(product.id!)
+                      isFavorite(product.id || '')
                         ? 'fill-red-500 text-red-500'
                         : 'text-gray-400'
                     }`}
@@ -72,7 +90,7 @@ export function ProductGrid() {
               </div>
 
               <div>
-                <h4 className="font-medium text-gray-900 mb-1">{product.name}</h4>
+                <h4 className="font-medium text-gray-900 mb-1 text-sm">{product.name || 'Unnamed Product'}</h4>
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-semibold text-gray-900">
                     {formatPrice(product.price)}
