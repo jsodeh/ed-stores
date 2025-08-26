@@ -5,6 +5,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { Categories } from "@/components/Categories";
 import { ProductGrid } from "@/components/ProductGrid";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { DebugPanel } from "@/components/DebugPanel";
 
 export default function Index() {
   return (
@@ -42,6 +43,7 @@ export default function Index() {
       </main>
 
       <BottomNavigation />
+      <DebugPanel />
     </div>
   );
 }
