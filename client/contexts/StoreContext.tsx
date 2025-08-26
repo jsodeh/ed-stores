@@ -71,6 +71,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadInitialData();
   }, []);
 
+  // Debug current state
+  useEffect(() => {
+    console.log('📦 Store state update:', {
+      loading,
+      productsCount: productsData.length,
+      categoriesCount: categoriesData.length,
+      cartItemsCount: cartItems.length,
+      favoritesCount: favoriteProducts.length
+    });
+  }, [loading, productsData.length, categoriesData.length, cartItems.length, favoriteProducts.length]);
+
   // Load user-specific data when authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -122,12 +133,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      await Promise.all([
-        refreshProducts(),
-        refreshCategories()
-      ]);
+      // Load products and categories sequentially to better debug any issues
+      await refreshProducts();
+      await refreshCategories();
+      console.log('✅ Initial data load completed');
     } catch (error) {
-      console.error('Failed to load initial data:', error);
+      console.error('❌ Failed to load initial data:', error);
     } finally {
       setLoading(false);
     }
@@ -283,8 +294,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return true;
   });
 
-  // Debug log for filtered products
-  console.log('🔍 Filtered products:', filteredProducts.length, 'out of', productsData.length, 'total products');
+  // Debug log for filtered products (only log when data changes)
+  useEffect(() => {
+    if (productsData.length > 0) {
+      console.log('🔍 Filtered products update:', {
+        total: productsData.length,
+        filtered: filteredProducts.length,
+        searchQuery,
+        selectedCategory
+      });
+    }
+  }, [productsData.length, filteredProducts.length, searchQuery, selectedCategory]);
 
   const cartTotal = cartItems.reduce((total, item) => {
     return total + (item.products?.price || 0) * item.quantity;
