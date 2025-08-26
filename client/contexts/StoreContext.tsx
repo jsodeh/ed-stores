@@ -135,27 +135,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshProducts = async () => {
     try {
+      console.log('🔄 Fetching products...');
       const { data, error } = await products.getAll();
       if (error) {
-        console.error('Error loading products:', error);
+        console.error('❌ Error loading products:', error);
         throw error;
       }
+      console.log('✅ Products loaded:', data?.length || 0, 'products');
       setProductsData(data || []);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error('❌ Error loading products:', error);
+      // Set empty array on error to avoid infinite loading
+      setProductsData([]);
     }
   };
 
   const refreshCategories = async () => {
     try {
+      console.log('🔄 Fetching categories...');
       const { data, error } = await categories.getAll();
       if (error) {
-        console.error('Error loading categories:', error);
+        console.error('❌ Error loading categories:', error);
         throw error;
       }
+      console.log('✅ Categories loaded:', data?.length || 0, 'categories');
       setCategoriesData(data || []);
     } catch (error) {
-      console.error('Error loading categories:', error);
+      console.error('❌ Error loading categories:', error);
+      // Set empty array on error to avoid infinite loading
+      setCategoriesData([]);
     }
   };
 
@@ -274,6 +282,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     return true;
   });
+
+  // Debug log for filtered products
+  console.log('🔍 Filtered products:', filteredProducts.length, 'out of', productsData.length, 'total products');
 
   const cartTotal = cartItems.reduce((total, item) => {
     return total + (item.products?.price || 0) * item.quantity;
