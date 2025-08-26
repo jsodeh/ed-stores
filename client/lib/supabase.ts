@@ -96,12 +96,20 @@ export const profiles = {
 export const products = {
   // Get all products
   getAll: async () => {
-    const { data, error } = await supabase
-      .from('product_details')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-    return { data, error }
+    try {
+      const { data, error } = await supabase
+        .rpc('get_product_details')
+
+      if (error) {
+        console.error('Products API Error:', error)
+        throw error
+      }
+
+      return { data: data || [], error: null }
+    } catch (err) {
+      console.error('Products fetch error:', err)
+      return { data: [], error: err }
+    }
   },
 
   // Get product by ID
@@ -142,12 +150,23 @@ export const products = {
 export const categories = {
   // Get all categories
   getAll: async () => {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-    return { data, error }
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+
+      if (error) {
+        console.error('Categories API Error:', error)
+        throw error
+      }
+
+      return { data: data || [], error: null }
+    } catch (err) {
+      console.error('Categories fetch error:', err)
+      return { data: [], error: err }
+    }
   }
 }
 
