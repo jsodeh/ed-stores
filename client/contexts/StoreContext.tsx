@@ -128,6 +128,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         refreshCategories()
       ]);
       console.log('✅ Initial data loaded successfully');
+      console.log('📊 Data summary:', {
+        products: productsData.length,
+        categories: categoriesData.length
+      });
     } catch (error) {
       console.error('❌ Failed to load initial data:', error);
     } finally {
@@ -137,14 +141,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshProducts = async () => {
     try {
+      console.log('🔄 Fetching products...');
       const { data, error } = await products.getAll();
       if (error) {
-        console.error('Error loading products - Details:', JSON.stringify(error, null, 2));
+        console.error('❌ Error loading products - Details:', JSON.stringify(error, null, 2));
         throw error;
       }
+      console.log('✅ Products loaded successfully:', data?.length || 0, 'items');
       setProductsData(data || []);
     } catch (error) {
-      console.error('Error loading products - Full error:', error);
+      console.error('❌ Error loading products - Full error:', error);
       if (error instanceof Error) {
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
@@ -154,14 +160,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshCategories = async () => {
     try {
+      console.log('🔄 Fetching categories...');
       const { data, error } = await categories.getAll();
       if (error) {
-        console.error('Error loading categories - Details:', JSON.stringify(error, null, 2));
+        console.error('❌ Error loading categories - Details:', JSON.stringify(error, null, 2));
         throw error;
       }
+      console.log('✅ Categories loaded successfully:', data?.length || 0, 'items');
       setCategoriesData(data || []);
     } catch (error) {
-      console.error('Error loading categories - Full error:', error);
+      console.error('❌ Error loading categories - Full error:', error);
       if (error instanceof Error) {
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
