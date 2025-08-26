@@ -11,16 +11,17 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Product } from "@shared/database.types";
 
-const categories = [
-  { id: null, name: "All", color: "bg-gray-100" },
-  { id: "grocery", name: "Grocery", color: "bg-primary" },
-  { id: "bakery", name: "Bakery", color: "bg-pink-100" },
-  { id: "veggies", name: "Veggies", color: "bg-green-100" },
-  { id: "meat", name: "Meat", color: "bg-red-100" },
-];
-
 export default function Store() {
-  const { selectedCategory, setSelectedCategory, addToCart, toggleFavorite, isFavorite, filteredProducts } = useStore();
+  const {
+    selectedCategory,
+    setSelectedCategory,
+    addToCart,
+    toggleFavorite,
+    isFavorite,
+    filteredProducts,
+    categories,
+    loading
+  } = useStore();
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,21 +84,44 @@ export default function Store() {
         {/* Filters and View Options */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <Button
-                key={category.id || 'all'}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category.id)}
-                className={`whitespace-nowrap ${
-                  selectedCategory === category.id
-                    ? 'bg-primary text-white'
-                    : 'border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {category.name}
-              </Button>
-            ))}
+            {/* All Categories Button */}
+            <Button
+              variant={selectedCategory === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(null)}
+              className={`whitespace-nowrap ${
+                selectedCategory === null
+                  ? 'bg-primary text-white'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              All
+            </Button>
+
+            {/* Database Categories */}
+            {loading ? (
+              // Loading skeleton for categories
+              Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+              ))
+            ) : (
+              categories.map((category) => (
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.slug ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category.slug)}
+                  className={`whitespace-nowrap ${
+                    selectedCategory === category.slug
+                      ? 'bg-primary text-white'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="mr-1">{category.icon}</span>
+                  {category.name}
+                </Button>
+              ))
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-2">
@@ -123,7 +147,9 @@ export default function Store() {
           <p className="text-gray-600">
             {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
             {selectedCategory && (
-              <span> in <Badge variant="secondary" className="ml-1 capitalize">{selectedCategory}</Badge></span>
+              <span> in <Badge variant="secondary" className="ml-1 capitalize">
+                {categories.find(c => c.slug === selectedCategory)?.name || selectedCategory}
+              </Badge></span>
             )}
           </p>
         </div>
