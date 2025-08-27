@@ -18,7 +18,11 @@ export function DesktopNavigation() {
   return (
     <header className="hidden md:flex items-center justify-between p-6 bg-white border-b border-gray-200">
       <div className="flex items-center gap-8">
-        <h1 className="text-2xl font-bold text-primary">ED Superstore</h1>
+        <img 
+          src="/logo.png" 
+          alt="ED Superstore" 
+          className="h-10 w-auto"
+        />
         
         <nav className="flex items-center gap-6">
           {navItems.map((item) => {

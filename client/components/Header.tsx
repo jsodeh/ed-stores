@@ -4,7 +4,11 @@ export function Header() {
   return (
     <header className="flex items-center justify-between p-4 bg-white">
       <div className="flex items-center">
-        <h1 className="text-lg font-bold text-primary">ED Superstore</h1>
+        <img 
+          src="/logo.png" 
+          alt="ED Superstore" 
+          className="h-8 w-auto"
+        />
       </div>
 
       <div className="flex items-center gap-2">
