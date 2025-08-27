@@ -29,13 +29,13 @@ export function Categories() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
         {categories.length === 0
           ? // Loading state
-            Array.from({ length: 4 }).map((_, index) => (
+            Array.from({ length: 6 }).map((_, index) => (
               <div
                 key={index}
-                className="flex flex-col items-center p-3 rounded-2xl"
+                className="flex flex-col items-center p-3 rounded-2xl min-w-[80px] flex-shrink-0"
               >
                 <div className="w-12 h-12 rounded-2xl bg-gray-200 animate-pulse mb-2"></div>
                 <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
@@ -46,7 +46,7 @@ export function Categories() {
               return (
                 <button
                   key={category.id}
-                  className={`flex flex-col items-center p-3 rounded-2xl transition-colors ${
+                  className={`flex flex-col items-center p-3 rounded-2xl transition-colors min-w-[80px] flex-shrink-0 ${
                     isSelected ? "bg-primary/10" : "hover:bg-gray-50"
                   }`}
                   onClick={() => handleCategoryClick(category.slug || "")}
@@ -62,7 +62,8 @@ export function Categories() {
                   </span>
                 </button>
               );
-            })}
+            })
+        }
       </div>
     </div>
   );

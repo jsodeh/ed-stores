@@ -46,12 +46,31 @@ export default function AdminInventory() {
     try {
       // Load products with stock info
       const { data: productsData, error: productsError } = await supabase
-        .from('product_details')
-        .select('*')
+        .from('products')
+        .select(`
+          *,
+          categories:category_id (
+            id,
+            name,
+            slug,
+            color
+          )
+        `)
         .order('stock_quantity', { ascending: true });
       
       if (productsError) throw productsError;
-      setProducts(productsData || []);
+      
+      // Transform data to match the view structure
+      const transformedData = (productsData || []).map(product => ({
+        ...product,
+        category_name: product.categories?.name || null,
+        category_slug: product.categories?.slug || null,
+        category_color: product.categories?.color || null,
+        average_rating: 0,
+        review_count: 0
+      }));
+      
+      setProducts(transformedData);
 
       // Load recent inventory transactions
       const { data: transactionsData, error: transactionsError } = await supabase

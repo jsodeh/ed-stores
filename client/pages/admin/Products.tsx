@@ -44,12 +44,31 @@ export default function AdminProducts() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("product_details")
-        .select("*")
+        .from("products")
+        .select(`
+          *,
+          categories:category_id (
+            id,
+            name,
+            slug,
+            color
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
+      
+      // Transform data to match the view structure
+      const transformedData = (data || []).map(product => ({
+        ...product,
+        category_name: product.categories?.name || null,
+        category_slug: product.categories?.slug || null,
+        category_color: product.categories?.color || null,
+        average_rating: 0,
+        review_count: 0
+      }));
+      
+      setProducts(transformedData);
     } catch (error) {
       console.error("Error loading products:", error);
     } finally {

@@ -73,6 +73,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Loading states
   const [loading, setLoading] = useState(true);
   const [cartLoading, setCartLoading] = useState(false);
+  const [hasConnectionError, setHasConnectionError] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,6 +83,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('📊 StoreContext State Update:', {
+      productsCount: productsData.length,
+      categoriesCount: categoriesData.length,
+      loading,
+      hasConnectionError
+    });
+  }, [productsData, categoriesData, loading, hasConnectionError]);
 
   // Load user-specific data when authenticated
   useEffect(() => {
@@ -96,6 +107,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Real-time subscriptions
   useEffect(() => {
+    // Only subscribe to real-time if we have a session and are authenticated
+    // This prevents WebSocket connection errors
+    if (!isAuthenticated) {
+      return;
+    }
+
     // Subscribe to product changes
     const productsSubscription = supabase
       .channel("products_changes")
@@ -130,30 +147,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         cartSubscription.unsubscribe();
       }
     };
-  }, [user]);
+  }, [user, isAuthenticated]);
 
   const loadInitialData = async () => {
+    console.log('🚀 StoreContext: Starting loadInitialData');
     setLoading(true);
 
     try {
+      console.log('📊 StoreContext: Loading products and categories in parallel');
       await Promise.all([refreshProducts(), refreshCategories()]);
+      console.log('✅ StoreContext: Initial data load completed');
     } catch (error) {
-      console.error("Failed to load initial data:", error);
+      console.error("❌ StoreContext: Failed to load initial data:", error);
     } finally {
       setLoading(false);
+      console.log('🏁 StoreContext: Loading state set to false');
     }
   };
 
   const refreshProducts = async () => {
     try {
+      console.log('🔍 StoreContext: Starting refreshProducts');
+      setHasConnectionError(false);
       const { data, error } = await products.getAll();
+      console.log('📦 StoreContext: Products query response:', { data, error, count: data?.length });
+      
       if (error) {
-        console.error("Error loading products:", error);
+        console.error("❌ StoreContext: Error loading products:", error);
+        // Check if it's an authentication error
+        if (error.message?.includes('401') || error.message?.includes('authentication')) {
+          console.warn("🔐 StoreContext: Authentication required for products. This might be due to RLS policies.");
+          setHasConnectionError(true);
+        }
         throw error;
       }
+      
+      console.log('✅ StoreContext: Setting products data:', data?.length || 0, 'products');
       setProductsData(data || []);
     } catch (error) {
-      console.error("Error loading products:", error);
+      console.error("❌ StoreContext: Exception in refreshProducts:", error);
+      setHasConnectionError(true);
       // Set empty array on error to avoid infinite loading
       setProductsData([]);
     }
@@ -161,14 +194,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshCategories = async () => {
     try {
+      console.log('🔍 StoreContext: Starting refreshCategories');
       const { data, error } = await categories.getAll();
+      console.log('📦 StoreContext: Categories query response:', { data, error, count: data?.length });
+      
       if (error) {
-        console.error("Error loading categories:", error);
-        throw error;
+        console.error("❌ StoreContext: Error loading categories:", error);
+        // Don't throw on categories error, as it's not critical for basic functionality
+        if (error.message?.includes('401') || error.message?.includes('authentication')) {
+          console.warn("🔐 StoreContext: Authentication required for categories. This might be due to RLS policies.");
+        }
       }
+      
+      console.log('✅ StoreContext: Setting categories data:', data?.length || 0, 'categories');
       setCategoriesData(data || []);
     } catch (error) {
-      console.error("Error loading categories:", error);
+      console.error("❌ StoreContext: Exception in refreshCategories:", error);
       // Set empty array on error to avoid infinite loading
       setCategoriesData([]);
     }
@@ -181,7 +222,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await cart.getCart(user.id);
       if (error) throw error;
-      setCartItems(data || []);
+      setCartItems((data || []) as CartItemWithProduct[]);
     } catch (error) {
       console.error("Error loading cart:", error);
     } finally {
