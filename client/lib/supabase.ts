@@ -145,6 +145,15 @@ export const products = {
       } else {
         console.log('❌ Query without filters failed:', result1.error);
         
+        // Check if it's an authentication/permission error
+        if (result1.error.message?.includes('401') || 
+            result1.error.message?.includes('403') || 
+            result1.error.message?.includes('permission')) {
+          console.warn('🔐 Authentication/Permission error detected. This might be due to RLS policies.');
+          // Return a specific error that the UI can handle
+          return { data: [], error: { ...result1.error, code: 'PERMISSION_DENIED' } };
+        }
+        
         // Approach 2: Try with minimal select
         console.log('📋 Attempting minimal query...');
         const result2 = await supabase
@@ -175,6 +184,13 @@ export const products = {
           console.log('✅ Minimal query with manual join succeeded');
         } else {
           console.log('❌ All query attempts failed');
+          // Check if it's an authentication/permission error
+          if (result2.error.message?.includes('401') || 
+              result2.error.message?.includes('403') || 
+              result2.error.message?.includes('permission')) {
+            console.warn('🔐 Authentication/Permission error detected in minimal query. This might be due to RLS policies.');
+            return { data: [], error: { ...result2.error, code: 'PERMISSION_DENIED' } };
+          }
           data = [];
           error = result2.error;
         }
@@ -348,6 +364,15 @@ export const categories = {
       } else {
         console.log('❌ Categories query failed:', result1.error);
         
+        // Check if it's an authentication/permission error
+        if (result1.error.message?.includes('401') || 
+            result1.error.message?.includes('403') || 
+            result1.error.message?.includes('permission')) {
+          console.warn('🔐 Authentication/Permission error detected for categories. This might be due to RLS policies.');
+          // Return a specific error that the UI can handle
+          return { data: [], error: { ...result1.error, code: 'PERMISSION_DENIED' } };
+        }
+        
         // Approach 2: Try with minimal select
         console.log('📋 Attempting minimal categories query...');
         const result2 = await supabase
@@ -361,6 +386,13 @@ export const categories = {
           console.log('✅ Minimal categories query succeeded');
         } else {
           console.log('❌ All categories query attempts failed');
+          // Check if it's an authentication/permission error
+          if (result2.error.message?.includes('401') || 
+              result2.error.message?.includes('403') || 
+              result2.error.message?.includes('permission')) {
+            console.warn('🔐 Authentication/Permission error detected in minimal categories query. This might be due to RLS policies.');
+            return { data: [], error: { ...result2.error, code: 'PERMISSION_DENIED' } };
+          }
           data = [];
           error = result2.error;
         }

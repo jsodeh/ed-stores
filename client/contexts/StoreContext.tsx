@@ -199,6 +199,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.log('✅ StoreContext: Initial data load completed');
     } catch (error) {
       console.error("❌ StoreContext: Failed to load initial data:", error);
+      // Show user-friendly error message
+      toast({
+        title: "Connection Error",
+        description: "Unable to load products and categories. Please check your connection and try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
       console.log('🏁 StoreContext: Loading state set to false');
@@ -215,11 +221,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error("❌ StoreContext: Error loading products:", error);
         // Check if it's an authentication error
-        if (error.message?.includes('401') || error.message?.includes('authentication')) {
+        if (error.message?.includes('401') || error.message?.includes('authentication') || error.code === 'PERMISSION_DENIED') {
           console.warn("🔐 StoreContext: Authentication required for products. This might be due to RLS policies.");
           setHasConnectionError(true);
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to view products. Please contact support.",
+            variant: "destructive",
+          });
         }
-        throw error;
+        // Set empty array on error to avoid infinite loading
+        setProductsData([]);
+        return;
       }
       
       console.log('✅ StoreContext: Setting products data:', data?.length || 0, 'products');
@@ -229,6 +242,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setHasConnectionError(true);
       // Set empty array on error to avoid infinite loading
       setProductsData([]);
+      toast({
+        title: "Error",
+        description: "Failed to load products. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -240,10 +258,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error("❌ StoreContext: Error loading categories:", error);
-        // Don't throw on categories error, as it's not critical for basic functionality
-        if (error.message?.includes('401') || error.message?.includes('authentication')) {
+        // Check if it's an authentication error
+        if (error.message?.includes('401') || error.message?.includes('authentication') || error.code === 'PERMISSION_DENIED') {
           console.warn("🔐 StoreContext: Authentication required for categories. This might be due to RLS policies.");
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to view categories. Please contact support.",
+            variant: "destructive",
+          });
         }
+        // Set empty array on error to avoid infinite loading
+        setCategoriesData([]);
+        return;
       }
       
       console.log('✅ StoreContext: Setting categories data:', data?.length || 0, 'categories');
@@ -252,6 +278,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.error("❌ StoreContext: Exception in refreshCategories:", error);
       // Set empty array on error to avoid infinite loading
       setCategoriesData([]);
+      toast({
+        title: "Error",
+        description: "Failed to load categories. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
