@@ -24,7 +24,7 @@ export default function Favorites() {
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(product);
+    addToCart(product, 1); // Explicitly specify quantity as 1
   };
 
   const handleToggleFavorite = (productId: string, e: React.MouseEvent) => {
@@ -153,7 +153,7 @@ export default function Favorites() {
               variant="outline"
               onClick={() => {
                 // Add all favorites to cart
-                favoriteProducts.forEach(product => addToCart(product));
+                favoriteProducts.forEach(product => addToCart(product, 1));
                 navigate('/cart');
               }}
               className="border-primary text-primary hover:bg-primary/10"

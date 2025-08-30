@@ -23,7 +23,7 @@ export function ProductGrid() {
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent opening modal when clicking add button
-    addToCart(product);
+    addToCart(product, 1); // Explicitly specify quantity as 1
   };
 
   const handleToggleFavorite = (productId: string, e: React.MouseEvent) => {

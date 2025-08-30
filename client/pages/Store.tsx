@@ -40,7 +40,7 @@ export default function Store() {
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(product);
+    addToCart(product, 1); // Explicitly specify quantity as 1
   };
 
   const handleToggleFavorite = (productId: string, e: React.MouseEvent) => {
