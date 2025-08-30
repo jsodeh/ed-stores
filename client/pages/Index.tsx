@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { DesktopNavigation } from "@/components/DesktopNavigation";
 import { HeroBanner } from "@/components/HeroBanner";
@@ -5,8 +6,16 @@ import { SearchBar } from "@/components/SearchBar";
 import { Categories } from "@/components/Categories";
 import { ProductGrid } from "@/components/ProductGrid";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { OrderTrackingModal } from "@/components/OrderTrackingModal";
+import { HelpSupportModal } from "@/components/HelpSupportModal";
+import { QuickActionsButton } from "@/components/QuickActionsButton";
+import { useNavigate } from "react-router-dom";
 
 export default function Index() {
+  const [showOrderTracking, setShowOrderTracking] = useState(false);
+  const [showHelpSupport, setShowHelpSupport] = useState(false);
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <DesktopNavigation />
@@ -31,13 +40,22 @@ export default function Index() {
               <div className="bg-white rounded-2xl p-6 mb-6">
                 <h3 className="font-semibold mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">
+                  <button 
+                    className="w-full text-left p-3 rounded-lg hover:bg-gray-50"
+                    onClick={() => setShowOrderTracking(true)}
+                  >
                     Track Your Order
                   </button>
-                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">
+                  <button 
+                    className="w-full text-left p-3 rounded-lg hover:bg-gray-50"
+                    onClick={() => setShowHelpSupport(true)}
+                  >
                     Help & Support
                   </button>
-                  <button className="w-full text-left p-3 rounded-lg hover:bg-gray-50">
+                  <button 
+                    className="w-full text-left p-3 rounded-lg hover:bg-gray-50"
+                    onClick={() => navigate('/profile')}
+                  >
                     My Account
                   </button>
                 </div>
@@ -48,6 +66,19 @@ export default function Index() {
       </main>
 
       <BottomNavigation />
+      
+      {/* Mobile Quick Actions Button */}
+      <QuickActionsButton />
+
+      {/* Modals */}
+      <OrderTrackingModal
+        isOpen={showOrderTracking}
+        onClose={() => setShowOrderTracking(false)}
+      />
+      <HelpSupportModal
+        isOpen={showHelpSupport}
+        onClose={() => setShowHelpSupport(false)}
+      />
     </div>
   );
 }
