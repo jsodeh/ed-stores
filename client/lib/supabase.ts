@@ -587,6 +587,86 @@ export const orders = {
   },
 };
 
+// Helper functions for notifications
+export const notifications = {
+  // Get user's notifications
+  getUserNotifications: async (userId: string) => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  },
+
+  // Get admin notifications (for admin users)
+  getAdminNotifications: async () => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return { data, error };
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId: string) => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  // Mark all notifications as read
+  markAllAsRead: async (userId: string) => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", userId);
+    return { data, error };
+  },
+
+  // Create notification for a specific user
+  createNotification: async (
+    userId: string,
+    title: string,
+    message: string,
+    type?: string,
+    actionUrl?: string
+  ) => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .insert({
+        user_id: userId,
+        title,
+        message,
+        type,
+        action_url: actionUrl
+      })
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  // Create admin notification for all admins
+  createAdminNotification: async (
+    title: string,
+    message: string,
+    type?: string,
+    actionUrl?: string
+  ) => {
+    const { error } = await supabase.rpc("create_admin_notification", {
+      p_title: title,
+      p_message: message,
+      p_type: type,
+      p_action_url: actionUrl
+    });
+    return { data: null, error };
+  },
+};
+
 // Expose to global scope for debugging (after all objects are defined)
 if (typeof window !== 'undefined') {
   (window as any).supabase = supabase;
@@ -597,4 +677,5 @@ if (typeof window !== 'undefined') {
   (window as any).orders = orders;
   (window as any).auth = auth;
   (window as any).profiles = profiles;
+  (window as any).notifications = notifications;
 }

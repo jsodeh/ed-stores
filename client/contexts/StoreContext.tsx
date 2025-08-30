@@ -11,12 +11,20 @@ import {
   categories,
   cart,
   favorites,
+  notifications,
 } from "@/lib/supabase";
 import { useAuth } from "./AuthContext";
 import { Product, Category, CartItem } from "@shared/database.types";
+import { useToast } from "@/hooks/use-toast";
 
 interface CartItemWithProduct extends CartItem {
   products: Product;
+}
+
+interface GuestCartItem {
+  productId: string;
+  quantity: number;
+  product: Product;
 }
 
 interface StoreContextType {
@@ -46,6 +54,7 @@ interface StoreContextType {
   updateCartQuantity: (productId: string, quantity: number) => Promise<void>;
   removeFromCart: (productId: string) => Promise<void>;
   clearCart: () => Promise<void>;
+  transferGuestCart: () => Promise<void>;
 
   // Favorites actions
   toggleFavorite: (productId: string) => Promise<void>;
@@ -62,13 +71,15 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, profile } = useAuth();
+  const { toast } = useToast();
 
   // State
   const [productsData, setProductsData] = useState<Product[]>([]);
   const [categoriesData, setCategoriesData] = useState<Category[]>([]);
   const [cartItems, setCartItems] = useState<CartItemWithProduct[]>([]);
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
+  const [guestCart, setGuestCart] = useState<GuestCartItem[]>([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -83,6 +94,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Load guest cart from localStorage on initial load
+  useEffect(() => {
+    if (!isAuthenticated) {
+      const savedCart = localStorage.getItem("guestCart");
+      if (savedCart) {
+        try {
+          const parsedCart = JSON.parse(savedCart);
+          setGuestCart(parsedCart);
+        } catch (e) {
+          console.error("Error parsing guest cart", e);
+        }
+      }
+    }
+  }, []);
+
+  // Save guest cart to localStorage whenever it changes
+  useEffect(() => {
+    if (!isAuthenticated && guestCart.length > 0) {
+      localStorage.setItem("guestCart", JSON.stringify(guestCart));
+    }
+  }, [guestCart, isAuthenticated]);
 
   // Debug: Log state changes
   useEffect(() => {
@@ -104,6 +137,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setFavoriteProducts([]);
     }
   }, [isAuthenticated, user]);
+
+  // Transfer guest cart to user cart when user logs in
+  useEffect(() => {
+    if (isAuthenticated && user && guestCart.length > 0) {
+      transferGuestCart();
+    }
+  }, [isAuthenticated, user, guestCart]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -244,24 +284,136 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Cart actions
-  const addToCart = async (product: Product, quantity = 1) => {
-    if (!user) {
-      // Handle guest user - could show login modal
-      console.log("Please sign in to add items to cart");
-      return;
+  // Transfer guest cart items to user's cart when they log in
+  const transferGuestCart = async () => {
+    if (!user || guestCart.length === 0) return;
+
+    try {
+      // Add each guest cart item to the user's cart
+      for (const item of guestCart) {
+        await cart.addItem(user.id, item.productId, item.quantity);
+      }
+      
+      // Clear guest cart
+      setGuestCart([]);
+      localStorage.removeItem("guestCart");
+      
+      // Refresh user's cart
+      await refreshCart();
+      
+      toast({
+        title: "Cart transferred",
+        description: "Your guest cart items have been added to your account",
+      });
+      
+      // Send notification to admins
+      await notifications.createAdminNotification(
+        "User Cart Transferred",
+        `User ${profile?.full_name || user.email} transferred ${guestCart.length} items from guest cart to account`,
+        "cart"
+      );
+    } catch (error) {
+      console.error("Error transferring guest cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to transfer cart items to your account",
+        variant: "destructive",
+      });
     }
+  };
+
+  // Cart actions for authenticated users
+  const addToCartAuthenticated = async (product: Product, quantity = 1) => {
+    if (!user) return;
 
     try {
       const { error } = await cart.addItem(user.id, product.id!, quantity);
       if (error) throw error;
+      
+      // Show success toast
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart`,
+      });
+      
+      // Send notification to admins
+      await notifications.createAdminNotification(
+        "Product Added to Cart",
+        `User ${profile?.full_name || user.email} added ${product.name} to cart`,
+        "cart"
+      );
+      
       // Cart will be refreshed by real-time subscription
     } catch (error) {
       console.error("Error adding to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart",
+        variant: "destructive",
+      });
     }
   };
 
-  const updateCartQuantity = async (productId: string, quantity: number) => {
+  // Cart actions for guest users
+  const addToCartGuest = async (product: Product, quantity = 1) => {
+    try {
+      // Check if product already exists in guest cart
+      const existingItemIndex = guestCart.findIndex(item => item.productId === product.id);
+      
+      let updatedCart: GuestCartItem[];
+      if (existingItemIndex >= 0) {
+        // Update quantity of existing item
+        updatedCart = [...guestCart];
+        updatedCart[existingItemIndex] = {
+          ...updatedCart[existingItemIndex],
+          quantity: updatedCart[existingItemIndex].quantity + quantity
+        };
+      } else {
+        // Add new item to cart
+        updatedCart = [
+          ...guestCart,
+          {
+            productId: product.id!,
+            quantity,
+            product
+          }
+        ];
+      }
+      
+      setGuestCart(updatedCart);
+      
+      // Show success toast
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart`,
+      });
+      
+      // Send notification to admins (for guest actions too)
+      await notifications.createAdminNotification(
+        "Guest Added to Cart",
+        `Guest added ${product.name} to cart`,
+        "cart"
+      );
+    } catch (error) {
+      console.error("Error adding to guest cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Main addToCart function that handles both authenticated and guest users
+  const addToCart = async (product: Product, quantity = 1) => {
+    if (isAuthenticated) {
+      await addToCartAuthenticated(product, quantity);
+    } else {
+      await addToCartGuest(product, quantity);
+    }
+  };
+
+  const updateCartQuantityAuthenticated = async (productId: string, quantity: number) => {
     if (!user) return;
 
     try {
@@ -269,44 +421,173 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
     } catch (error) {
       console.error("Error updating cart quantity:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update cart item",
+        variant: "destructive",
+      });
     }
   };
 
-  const removeFromCart = async (productId: string) => {
+  const updateCartQuantityGuest = async (productId: string, quantity: number) => {
+    try {
+      if (quantity <= 0) {
+        // Remove item from guest cart
+        setGuestCart(prev => prev.filter(item => item.productId !== productId));
+      } else {
+        // Update quantity of existing item
+        setGuestCart(prev => 
+          prev.map(item => 
+            item.productId === productId 
+              ? { ...item, quantity } 
+              : item
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error updating guest cart quantity:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update cart item",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateCartQuantity = async (productId: string, quantity: number) => {
+    if (isAuthenticated) {
+      await updateCartQuantityAuthenticated(productId, quantity);
+    } else {
+      await updateCartQuantityGuest(productId, quantity);
+    }
+  };
+
+  const removeFromCartAuthenticated = async (productId: string) => {
     if (!user) return;
 
     try {
       const { error } = await cart.removeItem(user.id, productId);
       if (error) throw error;
+      
+      toast({
+        title: "Removed from cart",
+        description: "Item has been removed from your cart",
+      });
     } catch (error) {
       console.error("Error removing from cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart",
+        variant: "destructive",
+      });
     }
   };
 
-  const clearCart = async () => {
+  const removeFromCartGuest = async (productId: string) => {
+    try {
+      setGuestCart(prev => prev.filter(item => item.productId !== productId));
+      
+      toast({
+        title: "Removed from cart",
+        description: "Item has been removed from your cart",
+      });
+    } catch (error) {
+      console.error("Error removing from guest cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeFromCart = async (productId: string) => {
+    if (isAuthenticated) {
+      await removeFromCartAuthenticated(productId);
+    } else {
+      await removeFromCartGuest(productId);
+    }
+  };
+
+  const clearCartAuthenticated = async () => {
     if (!user) return;
 
     try {
       const { error } = await cart.clearCart(user.id);
       if (error) throw error;
+      
+      toast({
+        title: "Cart cleared",
+        description: "Your cart has been cleared",
+      });
     } catch (error) {
       console.error("Error clearing cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear cart",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearCartGuest = async () => {
+    try {
+      setGuestCart([]);
+      localStorage.removeItem("guestCart");
+      
+      toast({
+        title: "Cart cleared",
+        description: "Your cart has been cleared",
+      });
+    } catch (error) {
+      console.error("Error clearing guest cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear cart",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearCart = async () => {
+    if (isAuthenticated) {
+      await clearCartAuthenticated();
+    } else {
+      await clearCartGuest();
     }
   };
 
   // Favorites actions
   const toggleFavorite = async (productId: string) => {
     if (!user) {
-      console.log("Please sign in to manage favorites");
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to manage favorites",
+      });
       return;
     }
 
     try {
       const { error } = await favorites.toggleFavorite(user.id, productId);
       if (error) throw error;
+      
+      // Show success toast
+      const isNowFavorite = !isFavorite(productId);
+      toast({
+        title: isNowFavorite ? "Added to favorites" : "Removed from favorites",
+        description: isNowFavorite 
+          ? "Item has been added to your favorites" 
+          : "Item has been removed from your favorites",
+      });
+      
       await refreshFavorites();
     } catch (error) {
       console.error("Error toggling favorite:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update favorites",
+        variant: "destructive",
+      });
     }
   };
 
@@ -334,14 +615,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return true;
   });
 
-  const cartTotal = cartItems.reduce((total, item) => {
-    return total + (item.products?.price || 0) * item.quantity;
-  }, 0);
+  // Calculate cart total based on authentication status
+  const cartTotal = isAuthenticated 
+    ? cartItems.reduce((total, item) => {
+        return total + (item.products?.price || 0) * item.quantity;
+      }, 0)
+    : guestCart.reduce((total, item) => {
+        return total + (item.product?.price || 0) * item.quantity;
+      }, 0);
 
-  const cartItemCount = cartItems.reduce(
-    (count, item) => count + item.quantity,
-    0,
-  );
+  // Calculate cart item count based on authentication status
+  const cartItemCount = isAuthenticated
+    ? cartItems.reduce((count, item) => count + item.quantity, 0)
+    : guestCart.reduce((count, item) => count + item.quantity, 0);
 
   const deliveryFee = cartTotal >= 50000 ? 0 : 2500;
   const finalTotal = cartTotal + deliveryFee;
@@ -350,7 +636,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Data
     products: productsData,
     categories: categoriesData,
-    cartItems,
+    cartItems: isAuthenticated ? cartItems : guestCart.map(item => ({
+      id: item.productId,
+      user_id: null,
+      product_id: item.productId,
+      quantity: item.quantity,
+      created_at: null,
+      updated_at: null,
+      products: item.product
+    })) as CartItemWithProduct[],
     favoriteProducts,
 
     // Loading states
@@ -373,6 +667,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updateCartQuantity,
     removeFromCart,
     clearCart,
+    transferGuestCart,
 
     // Favorites actions
     toggleFavorite,

@@ -16,7 +16,8 @@ import {
   LogOut,
   Menu,
   X,
-  Home
+  Home,
+  Bell
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -27,6 +28,7 @@ const adminMenuItems = [
   { id: "categories", label: "Categories", icon: Tags, path: "/admin/categories" },
   { id: "inventory", label: "Inventory", icon: Warehouse, path: "/admin/inventory" },
   { id: "messages", label: "Messages", icon: MessageSquare, path: "/admin/messages" },
+  { id: "notifications", label: "Notifications", icon: Bell, path: "/admin/notifications" },
 ];
 
 interface AdminLayoutProps {
@@ -76,17 +78,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2">
-              {/* Quick link to main site */}
-              <Button
-                variant="ghost"
-                className="w-full justify-start mb-4"
-                onClick={() => navigate('/')}
-              >
-                <Home className="h-4 w-4 mr-3" />
-                Back to Store
-              </Button>
-
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
               {adminMenuItems.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = currentPath === item.path;
@@ -94,7 +86,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
                 return (
                   <Button
                     key={item.id}
-                    variant={isActive ? "secondary" : "ghost"}
+                    variant="ghost"
                     className={`w-full justify-start ${
                       isActive ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:text-primary'
                     }`}
@@ -131,10 +123,9 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
                 </div>
               </div>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              <Button 
+                variant="outline" 
+                className="w-full"
                 onClick={handleSignOut}
               >
                 <LogOut className="h-4 w-4 mr-2" />
@@ -144,11 +135,11 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="flex-1 lg:ml-0">
-          {/* Top bar */}
-          <header className="bg-white shadow-sm border-b px-4 py-3 lg:px-6">
-            <div className="flex items-center justify-between">
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col lg:ml-64">
+          {/* Header */}
+          <header className="bg-white border-b sticky top-0 z-10">
+            <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"

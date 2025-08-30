@@ -2,16 +2,19 @@ import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ProductModal } from "./ProductModal";
 import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
-  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading } =
+  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading, selectedCategory } =
     useStore();
+  const { isAuthenticated } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const products = filteredProducts.slice(0, 8); // Show first 8 products on homepage
+  // Show all products on homepage when no category is selected, otherwise limit to 8
+  const products = selectedCategory ? filteredProducts.slice(0, 8) : filteredProducts;
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);

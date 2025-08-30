@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStore } from "@/contexts/StoreContext";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 
 interface AuthModalProps {
@@ -21,7 +22,8 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalProps) {
   const { signIn, signUp, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const { cartItemCount, transferGuestCart } = useStore();
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -38,6 +40,26 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
     confirmPassword: '',
     fullName: ''
   });
+
+  // Check if guest has items in cart
+  const [hasGuestCart, setHasGuestCart] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // Check if there are items in guest cart
+    const savedCart = localStorage.getItem("guestCart");
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        setHasGuestCart(parsedCart.length > 0);
+      } catch (e) {
+        setHasGuestCart(false);
+      }
+    } else {
+      setHasGuestCart(false);
+    }
+  }, [isOpen]);
 
   const resetForm = () => {
     setSignInData({ email: '', password: '' });
@@ -66,6 +88,12 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
       if (error) {
         setError(error.message);
       } else {
+        // Transfer guest cart to user cart after successful sign in
+        if (hasGuestCart) {
+          setTimeout(() => {
+            transferGuestCart();
+          }, 1000);
+        }
         handleClose();
       }
     } catch (err) {
@@ -118,7 +146,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'signin' | 'signup')} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -137,6 +165,14 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
           )}
 
           <TabsContent value="signin" className="space-y-4">
+            {hasGuestCart && (
+              <Alert>
+                <AlertDescription>
+                  Your cart with {cartItemCount} item{cartItemCount !== 1 ? 's' : ''} will be transferred to your account after sign in.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="signin-email">Email</Label>
@@ -186,6 +222,14 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
           </TabsContent>
 
           <TabsContent value="signup" className="space-y-4">
+            {hasGuestCart && (
+              <Alert>
+                <AlertDescription>
+                  Your cart with {cartItemCount} item{cartItemCount !== 1 ? 's' : ''} will be transferred to your account after sign up.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="signup-name">Full Name</Label>

@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 export default function Cart() {
   const { cartItems, updateCartQuantity, removeFromCart, cartTotal, clearCart } = useStore();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -18,14 +20,8 @@ export default function Cart() {
     return `₦${(price || 0).toLocaleString()}.00`;
   };
 
-  const handleCheckout = async () => {
-    setIsCheckingOut(true);
-    // Simulate checkout process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    clearCart();
-    setIsCheckingOut(false);
-    navigate('/', { replace: true });
-    // In a real app, you would integrate with a payment provider
+  const handleProceedToCheckout = () => {
+    navigate('/checkout');
   };
 
   const deliveryFee = cartTotal > 50000 ? 0 : 2500; // Free delivery over ₦50,000
@@ -87,7 +83,7 @@ export default function Cart() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
             {cartItems.map((item) => (
-              <div key={item.product.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div key={item.product_id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex gap-4">
                   <img
                     src={item.products?.image_url || '/placeholder.svg'}
@@ -182,14 +178,28 @@ export default function Cart() {
               </div>
               
               <Button 
-                className="w-full bg-primary hover:bg-primary/90 py-3"
-                onClick={handleCheckout}
-                disabled={isCheckingOut}
+                className="w-full bg-primary hover:bg-primary/90 py-3 mb-3"
+                onClick={handleProceedToCheckout}
               >
-                {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
+                Proceed to Checkout
               </Button>
               
-              <div className="mt-4 space-y-2 text-xs text-gray-500">
+              {!isAuthenticated && (
+                <div className="text-center mb-4">
+                  <p className="text-sm text-gray-600">
+                    Checkout as guest or{" "}
+                    <button 
+                      className="text-primary font-medium hover:underline"
+                      onClick={() => navigate('/')}
+                    >
+                      sign in
+                    </button>{" "}
+                    for membership benefits
+                  </p>
+                </div>
+              )}
+              
+              <div className="space-y-2 text-xs text-gray-500">
                 <p>• Secure checkout</p>
                 <p>• 30-day return policy</p>
                 <p>• Free delivery on orders over ₦50,000</p>

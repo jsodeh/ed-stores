@@ -714,6 +714,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_admin_notification: {
+        Args: {
+          p_title: string
+          p_message: string
+          p_type?: string
+          p_action_url?: string
+        }
+        Returns: undefined
+      }
       update_product_stock: {
         Args: {
           p_product_id: string
