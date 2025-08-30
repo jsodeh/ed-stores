@@ -421,61 +421,101 @@ export const categories = {
 export const cart = {
   // Get user's cart
   getCart: async (userId: string) => {
-    const { data, error } = await supabase
-      .from("cart_items")
-      .select(
-        `
-        *,
-        products:product_id (
+    try {
+      console.log('🛒 Fetching cart for user:', userId);
+      const { data, error } = await supabase
+        .from("cart_items")
+        .select(
+          `
           *,
-          categories:category_id (
-            id,
-            name,
-            slug,
-            color
+          products:product_id (
+            *,
+            categories:category_id (
+              id,
+              name,
+              slug,
+              color
+            )
           )
+        `,
         )
-      `,
-      )
-      .eq("user_id", userId);
-    
-    if (data && !error) {
-      // Transform data to match the expected structure
-      const transformedData = data.map(item => ({
-        ...item,
-        products: {
-          ...item.products,
-          category_name: item.products?.categories?.name || null,
-          category_slug: item.products?.categories?.slug || null,
-          category_color: item.products?.categories?.color || null,
-          average_rating: 0,
-          review_count: 0,
-          // Remove the nested categories object
-          categories: undefined
+        .eq("user_id", userId);
+      
+      if (error) {
+        console.error("❌ Cart API Error:", error);
+        // Check if it's an authentication/permission error
+        if (error.message?.includes('401') || 
+            error.message?.includes('403') || 
+            error.message?.includes('permission')) {
+          console.warn('🔐 Authentication/Permission error detected for cart. This might be due to RLS policies.');
+          return { data: [], error: { ...error, code: 'PERMISSION_DENIED' } };
         }
-      })).filter(item => item.products); // Filter out items without products
-      return { data: transformedData, error };
+        return { data: [], error };
+      }
+      
+      if (data) {
+        // Transform data to match the expected structure
+        const transformedData = data.map(item => ({
+          ...item,
+          products: {
+            ...item.products,
+            category_name: item.products?.categories?.name || null,
+            category_slug: item.products?.categories?.slug || null,
+            category_color: item.products?.categories?.color || null,
+            average_rating: 0,
+            review_count: 0,
+            // Remove the nested categories object
+            categories: undefined
+          }
+        })).filter(item => item.products); // Filter out items without products
+        
+        console.log('✅ Cart fetched successfully:', transformedData.length, 'items');
+        return { data: transformedData, error: null };
+      }
+      
+      return { data: data || [], error: null };
+    } catch (err) {
+      console.error("❌ Cart fetch error:", err);
+      return { data: [], error: err };
     }
-    
-    return { data: data || [], error };
   },
 
   // Add item to cart
   addItem: async (userId: string, productId: string, quantity: number = 1) => {
-    const { data, error } = await supabase
-      .from("cart_items")
-      .upsert(
-        {
-          user_id: userId,
-          product_id: productId,
-          quantity,
-        },
-        {
-          onConflict: "user_id,product_id",
-        },
-      )
-      .select();
-    return { data, error };
+    try {
+      console.log('🛒 Adding item to cart:', { userId, productId, quantity });
+      const { data, error } = await supabase
+        .from("cart_items")
+        .upsert(
+          {
+            user_id: userId,
+            product_id: productId,
+            quantity,
+          },
+          {
+            onConflict: "user_id,product_id",
+          },
+        )
+        .select();
+      
+      if (error) {
+        console.error("❌ Cart addItem Error:", error);
+        // Check if it's an authentication/permission error
+        if (error.message?.includes('401') || 
+            error.message?.includes('403') || 
+            error.message?.includes('permission')) {
+          console.warn('🔐 Authentication/Permission error detected for cart addItem. This might be due to RLS policies.');
+          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+        }
+        return { data: null, error };
+      }
+      
+      console.log('✅ Item added to cart successfully');
+      return { data, error: null };
+    } catch (err) {
+      console.error("❌ Cart addItem error:", err);
+      return { data: null, error: err };
+    }
   },
 
   // Update cart item quantity
@@ -484,36 +524,96 @@ export const cart = {
     productId: string,
     quantity: number,
   ) => {
-    if (quantity <= 0) {
-      return cart.removeItem(userId, productId);
-    }
+    try {
+      if (quantity <= 0) {
+        return cart.removeItem(userId, productId);
+      }
 
-    const { data, error } = await supabase
-      .from("cart_items")
-      .update({ quantity })
-      .eq("user_id", userId)
-      .eq("product_id", productId)
-      .select();
-    return { data, error };
+      console.log('🛒 Updating cart item quantity:', { userId, productId, quantity });
+      const { data, error } = await supabase
+        .from("cart_items")
+        .update({ quantity })
+        .eq("user_id", userId)
+        .eq("product_id", productId)
+        .select();
+      
+      if (error) {
+        console.error("❌ Cart updateQuantity Error:", error);
+        // Check if it's an authentication/permission error
+        if (error.message?.includes('401') || 
+            error.message?.includes('403') || 
+            error.message?.includes('permission')) {
+          console.warn('🔐 Authentication/Permission error detected for cart updateQuantity. This might be due to RLS policies.');
+          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+        }
+        return { data: null, error };
+      }
+      
+      console.log('✅ Cart item quantity updated successfully');
+      return { data, error: null };
+    } catch (err) {
+      console.error("❌ Cart updateQuantity error:", err);
+      return { data: null, error: err };
+    }
   },
 
   // Remove item from cart
   removeItem: async (userId: string, productId: string) => {
-    const { data, error } = await supabase
-      .from("cart_items")
-      .delete()
-      .eq("user_id", userId)
-      .eq("product_id", productId);
-    return { data, error };
+    try {
+      console.log('🛒 Removing item from cart:', { userId, productId });
+      const { data, error } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("user_id", userId)
+        .eq("product_id", productId);
+      
+      if (error) {
+        console.error("❌ Cart removeItem Error:", error);
+        // Check if it's an authentication/permission error
+        if (error.message?.includes('401') || 
+            error.message?.includes('403') || 
+            error.message?.includes('permission')) {
+          console.warn('🔐 Authentication/Permission error detected for cart removeItem. This might be due to RLS policies.');
+          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+        }
+        return { data: null, error };
+      }
+      
+      console.log('✅ Item removed from cart successfully');
+      return { data, error: null };
+    } catch (err) {
+      console.error("❌ Cart removeItem error:", err);
+      return { data: null, error: err };
+    }
   },
 
   // Clear cart
   clearCart: async (userId: string) => {
-    const { data, error } = await supabase
-      .from("cart_items")
-      .delete()
-      .eq("user_id", userId);
-    return { data, error };
+    try {
+      console.log('🛒 Clearing cart for user:', userId);
+      const { data, error } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("user_id", userId);
+      
+      if (error) {
+        console.error("❌ Cart clearCart Error:", error);
+        // Check if it's an authentication/permission error
+        if (error.message?.includes('401') || 
+            error.message?.includes('403') || 
+            error.message?.includes('permission')) {
+          console.warn('🔐 Authentication/Permission error detected for cart clearCart. This might be due to RLS policies.');
+          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+        }
+        return { data: null, error };
+      }
+      
+      console.log('✅ Cart cleared successfully');
+      return { data, error: null };
+    } catch (err) {
+      console.error("❌ Cart clearCart error:", err);
+      return { data: null, error: err };
+    }
   },
 };
 

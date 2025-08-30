@@ -161,7 +161,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         { event: "*", schema: "public", table: "products" },
         () => refreshProducts(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Products subscription status:', status);
+      });
 
     // Subscribe to cart changes for current user
     let cartSubscription: any = null;
@@ -176,12 +178,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             table: "cart_items",
             filter: `user_id=eq.${user.id}`,
           },
-          () => refreshCart(),
+          (payload) => {
+            console.log('🛒 Cart change detected:', payload);
+            refreshCart();
+          },
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 Cart subscription status:', status);
+        });
     }
 
     return () => {
+      console.log('🧹 Unsubscribing from real-time channels');
       productsSubscription.unsubscribe();
       if (cartSubscription) {
         cartSubscription.unsubscribe();
@@ -291,11 +299,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     setCartLoading(true);
     try {
+      console.log('🛒 StoreContext: Refreshing cart for user', user.id);
       const { data, error } = await cart.getCart(user.id);
-      if (error) throw error;
+      if (error) {
+        console.error("❌ StoreContext: Error loading cart:", error);
+        if (error.code === 'PERMISSION_DENIED') {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access your cart. Please contact support.",
+            variant: "destructive",
+          });
+        }
+        throw error;
+      }
+      console.log('✅ StoreContext: Cart refreshed with', data?.length || 0, 'items');
       setCartItems((data || []) as CartItemWithProduct[]);
     } catch (error) {
-      console.error("Error loading cart:", error);
+      console.error("❌ StoreContext: Exception in refreshCart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your cart. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setCartLoading(false);
     }
@@ -317,12 +342,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Transfer guest cart items to user's cart when they log in
   const transferGuestCart = async () => {
-    if (!user || guestCart.length === 0) return;
+    if (!user || guestCart.length === 0) {
+      console.log('🛒 StoreContext: No guest cart to transfer or user not authenticated');
+      return;
+    }
 
     try {
+      console.log('🛒 StoreContext: Transferring', guestCart.length, 'items from guest cart to user cart');
       // Add each guest cart item to the user's cart
       for (const item of guestCart) {
-        await cart.addItem(user.id, item.productId, item.quantity);
+        const { error } = await cart.addItem(user.id, item.productId, item.quantity);
+        if (error) {
+          console.error("❌ StoreContext: Error adding item to cart during transfer:", error);
+          if (error.code === 'PERMISSION_DENIED') {
+            toast({
+              title: "Access Denied",
+              description: "You don't have permission to add items to your cart. Please contact support.",
+              variant: "destructive",
+            });
+            return;
+          }
+          throw error;
+        }
       }
       
       // Clear guest cart
@@ -344,7 +385,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         "cart"
       );
     } catch (error) {
-      console.error("Error transferring guest cart:", error);
+      console.error("❌ StoreContext: Error transferring guest cart:", error);
       toast({
         title: "Error",
         description: "Failed to transfer cart items to your account",
@@ -358,8 +399,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      const { error } = await cart.addItem(user.id, product.id!, quantity);
-      if (error) throw error;
+      console.log('🛒 StoreContext: Adding authenticated item to cart', { productId: product.id, quantity });
+      const { data, error } = await cart.addItem(user.id, product.id!, quantity);
+      if (error) {
+        console.error("❌ StoreContext: Error adding to cart:", error);
+        if (error.code === 'PERMISSION_DENIED') {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to add items to your cart. Please contact support.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
       
       // Show success toast
       toast({
@@ -375,8 +428,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
       
       // Cart will be refreshed by real-time subscription
+      console.log('✅ StoreContext: Item added to cart successfully');
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      console.error("❌ StoreContext: Exception in addToCartAuthenticated:", error);
       toast({
         title: "Error",
         description: "Failed to add item to cart",
