@@ -213,7 +213,9 @@ export const products = {
           category_slug: product.categories?.slug || null,
           category_color: product.categories?.color || null,
           average_rating: 0,
-          review_count: 0
+          review_count: 0,
+          // Remove nested category object to avoid confusion
+          categories: undefined
         }));
       
       console.log('✅ Products transformed and filtered:', transformedData.length);
@@ -249,7 +251,9 @@ export const products = {
         category_slug: data.categories?.slug || null,
         category_color: data.categories?.color || null,
         average_rating: 0,
-        review_count: 0
+        review_count: 0,
+        // Remove nested category object to avoid confusion
+        categories: undefined
       };
       return { data: transformedData, error };
     }
@@ -282,7 +286,9 @@ export const products = {
         category_slug: product.categories?.slug || null,
         category_color: product.categories?.color || null,
         average_rating: 0,
-        review_count: 0
+        review_count: 0,
+        // Remove nested category object to avoid confusion
+        categories: undefined
       }));
       return { data: transformedData, error };
     }
@@ -327,7 +333,9 @@ export const products = {
         category_slug: product.categories?.slug || null,
         category_color: product.categories?.color || null,
         average_rating: 0,
-        review_count: 0
+        review_count: 0,
+        // Remove nested category object to avoid confusion
+        categories: undefined
       }));
       return { data: transformedData, error };
     }
