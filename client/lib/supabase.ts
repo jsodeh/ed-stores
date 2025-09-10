@@ -205,18 +205,32 @@ export const products = {
       }
 
       // Transform and filter data on client side
+      console.log('🔍 Raw products data before transformation:', data?.length, 'items');
+      
       const transformedData = (data || [])
-        .filter(product => product.is_active !== false) // Client-side active filter
-        .map(product => ({
-          ...product,
-          category_name: product.categories?.name || null,
-          category_slug: product.categories?.slug || null,
-          category_color: product.categories?.color || null,
-          average_rating: 0,
-          review_count: 0,
-          // Remove nested category object to avoid confusion
-          categories: undefined
-        }));
+        .filter(product => {
+          const isActive = product.is_active !== false;
+          if (!isActive) {
+            console.log('🔍 Filtering out inactive product:', product.name, 'is_active:', product.is_active);
+          }
+          return isActive;
+        })
+        .map(product => {
+          const transformed = {
+            ...product,
+            category_name: product.categories?.name || null,
+            category_slug: product.categories?.slug || null,
+            category_color: product.categories?.color || null,
+            average_rating: 0,
+            review_count: 0,
+            // Remove nested category object to avoid confusion
+            categories: undefined
+          };
+          console.log('🔍 Transformed product:', product.name, 'category:', transformed.category_name);
+          return transformed;
+        });
+      
+      console.log('🔍 Final transformed products:', transformedData.length, 'items');
       
       console.log('✅ Products transformed and filtered:', transformedData.length);
       return { data: transformedData, error: null };
@@ -415,7 +429,17 @@ export const categories = {
       }
 
       // Filter active categories on client side
-      const activeCategories = (data || []).filter(category => category.is_active !== false);
+      console.log('🔍 Raw categories data before transformation:', data?.length, 'items');
+      
+      const activeCategories = (data || []).filter(category => {
+        const isActive = category.is_active !== false;
+        if (!isActive) {
+          console.log('🔍 Filtering out inactive category:', category.name, 'is_active:', category.is_active);
+        }
+        return isActive;
+      });
+      
+      console.log('🔍 Final transformed categories:', activeCategories.length, 'items');
       console.log('✅ Active categories filtered:', activeCategories.length);
       return { data: activeCategories, error: null };
     } catch (err) {
