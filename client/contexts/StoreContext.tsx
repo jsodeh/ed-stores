@@ -349,6 +349,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log('🛒 StoreContext: Transferring', guestCart.length, 'items from guest cart to user cart');
+      
+      // Store the original guest cart length for the notification
+      const originalGuestCartLength = guestCart.length;
+      
       // Add each guest cart item to the user's cart
       for (const item of guestCart) {
         const { error } = await cart.addItem(user.id, item.productId, item.quantity);
@@ -362,11 +366,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             });
             return;
           }
-          throw error;
+          // Don't throw error, just log it and continue with other items
+          console.warn("⚠️ StoreContext: Skipping item due to error:", item.productId);
+          continue;
         }
       }
       
-      // Clear guest cart
+      // Clear guest cart regardless of individual item success
       setGuestCart([]);
       localStorage.removeItem("guestCart");
       
@@ -378,12 +384,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         description: "Your guest cart items have been added to your account",
       });
       
-      // Send notification to admins
-      await notifications.createAdminNotification(
-        "User Cart Transferred",
-        `User ${profile?.full_name || user.email} transferred ${guestCart.length} items from guest cart to account`,
-        "cart"
-      );
+      // Send notification to admins (only if we have profile data)
+      try {
+        await notifications.createAdminNotification(
+          "User Cart Transferred",
+          `User ${profile?.full_name || user.email} transferred ${originalGuestCartLength} items from guest cart to account`,
+          "cart"
+        );
+      } catch (notificationError) {
+        console.warn("⚠️ StoreContext: Failed to send admin notification:", notificationError);
+        // Don't fail the entire transfer for notification errors
+      }
     } catch (error) {
       console.error("❌ StoreContext: Error transferring guest cart:", error);
       toast({

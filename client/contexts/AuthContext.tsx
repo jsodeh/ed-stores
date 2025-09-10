@@ -43,12 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔄 AuthContext: Auth state change event:', event, session ? 'Session exists' : 'No session');
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log('👤 AuthContext: User signed in, loading profile');
           await loadUserProfile(session.user.id);
         } else {
+          console.log('🚪 AuthContext: User signed out, clearing profile');
           setProfile(null);
         }
         
@@ -95,7 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     setLoading(true);
     try {
+      console.log('🚪 AuthContext: Starting sign out process');
       await auth.signOut();
+      console.log('✅ AuthContext: Sign out successful');
+      // The auth state change listener will handle setting user, profile, and session to null
+      // But we can also set them here as a backup
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+    } catch (error) {
+      console.error('❌ AuthContext: Error during sign out:', error);
+      // Even if there's an error, clear the local state
       setUser(null);
       setProfile(null);
       setSession(null);
