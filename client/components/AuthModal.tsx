@@ -88,12 +88,8 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
       if (error) {
         setError(error.message);
       } else {
-        // Transfer guest cart to user cart after successful sign in
-        if (hasGuestCart) {
-          setTimeout(() => {
-            transferGuestCart();
-          }, 1000);
-        }
+        // Cart transfer will be handled automatically by StoreContext when auth state changes
+        console.log('✅ AuthModal: Sign in successful, cart transfer will be handled by StoreContext');
         handleClose();
       }
     } catch (err) {

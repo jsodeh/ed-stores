@@ -95,6 +95,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadInitialData();
   }, []);
 
+  // Reload data when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('🔄 StoreContext: User authenticated, reloading data');
+      loadInitialData();
+    }
+  }, [isAuthenticated]);
+
   // Load guest cart from localStorage on initial load
   useEffect(() => {
     if (!isAuthenticated) {
@@ -130,6 +138,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Load user-specific data when authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
+      console.log('🔄 StoreContext: Loading user-specific data for authenticated user');
       refreshCart();
       refreshFavorites();
     } else {
@@ -141,7 +150,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Transfer guest cart to user cart when user logs in
   useEffect(() => {
     if (isAuthenticated && user && guestCart.length > 0) {
-      transferGuestCart();
+      console.log('🛒 StoreContext: User signed in with guest cart, transferring items');
+      // Add a small delay to ensure user cart is ready
+      setTimeout(() => {
+        transferGuestCart();
+      }, 500);
     }
   }, [isAuthenticated, user, guestCart]);
 
@@ -349,6 +362,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log('🛒 StoreContext: Transferring', guestCart.length, 'items from guest cart to user cart');
+      
+      // First, ensure user's cart is loaded
+      await refreshCart();
       
       // Store the original guest cart length for the notification
       const originalGuestCartLength = guestCart.length;
