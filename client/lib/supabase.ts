@@ -162,6 +162,10 @@ export const profiles = {
 export const products = {
   // Get all products
   getAll: async () => {
+    if (supabaseInvalidApiKey) {
+      console.error('❌ Products fetch aborted: invalid Supabase API key');
+      return { data: [], error: new Error('Invalid Supabase API key configured') };
+    }
     try {
       console.log('🔍 Fetching products from products table with category join...');
       
