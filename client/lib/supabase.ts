@@ -16,6 +16,8 @@ console.log('🌍 Environment variables loaded:', {
   mode: import.meta.env.MODE
 });
 
+let supabaseInvalidApiKey = false;
+
 function normalizeError(err: any): Error | null {
   if (!err) return null;
   if (err instanceof Error) return err;
@@ -29,11 +31,21 @@ function normalizeError(err: any): Error | null {
     const message = parts.join(' | ');
     const e = new Error(message);
     (e as any).original = err;
+    // Detect invalid API key messages and set flag so we can short-circuit further requests
+    try {
+      const lower = message.toLowerCase();
+      if (lower.includes('invalid api key') || lower.includes('invalid key') || lower.includes('api key is invalid')) {
+        supabaseInvalidApiKey = true;
+        console.error('🔒 Supabase invalid API key detected:', message);
+      }
+    } catch (e) {}
     return e;
   } catch {
     return new Error(String(err));
   }
 }
+
+export { supabaseInvalidApiKey };
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
