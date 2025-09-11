@@ -64,6 +64,7 @@ export const publicSupabase = createClient<Database>(supabaseUrl, supabaseAnonKe
     autoRefreshToken: false,
     persistSession: false,
     detectSessionInUrl: false,
+    storageKey: 'sb-public',
   },
 });
 
@@ -72,7 +73,7 @@ export const publicSupabase = createClient<Database>(supabaseUrl, supabaseAnonKe
 if (typeof window !== 'undefined') {
   (async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from('products')
         .select('id')
         .limit(1);
