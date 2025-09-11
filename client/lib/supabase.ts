@@ -118,12 +118,17 @@ export const products = {
       const { data: { session } } = await supabase.auth.getSession();
       console.log('🔐 Current session:', session ? 'Authenticated' : 'Anonymous');
       
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+      );
+      
       // Try multiple approaches to get data
       let data, error;
       
       // Approach 1: Try without any filters first
       console.log('📋 Attempting query without filters...');
-      const result1 = await supabase
+      const queryPromise = supabase
         .from("products")
         .select(`
           *,
@@ -135,6 +140,8 @@ export const products = {
           )
         `)
         .order("created_at", { ascending: false });
+      
+      const result1 = await Promise.race([queryPromise, timeoutPromise]);
       
       console.log('🔍 Raw query result:', result1);
       
@@ -200,8 +207,28 @@ export const products = {
       
       if (error) {
         console.error("Products API Error:", error);
-        // Don't throw error, return empty array to prevent app crash
-        return { data: [], error };
+        
+        // Try a simple fallback query
+        console.log('🔄 Trying simple fallback query...');
+        try {
+          const fallbackResult = await supabase
+            .from("products")
+            .select("*")
+            .limit(10);
+          
+          if (!fallbackResult.error && fallbackResult.data) {
+            console.log('✅ Fallback query succeeded:', fallbackResult.data.length, 'items');
+            data = fallbackResult.data;
+            error = null;
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback query also failed:', fallbackError);
+        }
+        
+        if (error) {
+          // Don't throw error, return empty array to prevent app crash
+          return { data: [], error };
+        }
       }
 
       // Transform and filter data on client side
