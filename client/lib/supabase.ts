@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@shared/database.types";
 import { createClient } from "@supabase/supabase-js";
 
