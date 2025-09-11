@@ -26,11 +26,11 @@ export function DesktopNavigation() {
     try {
       console.log('🚪 DesktopNavigation: Starting sign out');
       await signOut();
-      console.log('✅ DesktopNavigation: Sign out completed, navigating to home');
-      navigate("/");
+      console.log('✅ DesktopNavigation: Sign out completed');
     } catch (error) {
       console.error("❌ DesktopNavigation: Error signing out:", error);
-      // Even if sign out fails, try to navigate to home and clear local state
+    } finally {
+      // Always return to homepage
       navigate("/");
     }
   };

@@ -1,11 +1,15 @@
-import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@shared/database.types";
+import type { Database } from "@shared/database.types";
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://isgqdllaunoydbjweiwo.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzZ3FkbGxhdW5veWRiandlaXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc1MTc2MDcsImV4cCI6MjA1MzA5MzYwN30.O-w9MXPBBpMcWXUrH5dGqaorZNFzJ2jKi2LuGKmnXps";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Debug: Log what credentials are being used
 console.log('🔧 Supabase Configuration Debug:');
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase env vars. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+}
 console.log('📍 URL:', supabaseUrl);
 console.log('🔑 API Key (first 20 chars):', supabaseAnonKey.substring(0, 20) + '...');
 console.log('🌍 Environment variables loaded:', {
@@ -15,6 +19,37 @@ console.log('🌍 Environment variables loaded:', {
   mode: import.meta.env.MODE
 });
 
+let supabaseInvalidApiKey = false;
+
+function normalizeError(err: any): Error | null {
+  if (!err) return null;
+  if (err instanceof Error) return err;
+  try {
+    const parts: string[] = [];
+    if (err.message) parts.push(err.message);
+    if (err.status) parts.push(`status: ${err.status}`);
+    if (err.code) parts.push(`code: ${err.code}`);
+    if (err.details) parts.push(`details: ${JSON.stringify(err.details)}`);
+    if (parts.length === 0) parts.push(JSON.stringify(err));
+    const message = parts.join(' | ');
+    const e = new Error(message);
+    (e as any).original = err;
+    // Detect invalid API key messages and set flag so we can short-circuit further requests
+    try {
+      const lower = message.toLowerCase();
+      if (lower.includes('invalid api key') || lower.includes('invalid key') || lower.includes('api key is invalid')) {
+        supabaseInvalidApiKey = true;
+        console.error('🔒 Supabase invalid API key detected:', message);
+      }
+    } catch (e) {}
+    return e;
+  } catch {
+    return new Error(String(err));
+  }
+}
+
+export { supabaseInvalidApiKey };
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -23,7 +58,36 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// A secondary client without user session for public, cacheable reads
+export const publicSupabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
+    storageKey: 'sb-public',
+  },
+});
+
 // Helper functions for auth
+// Initial lightweight validation to detect invalid API keys early
+if (typeof window !== 'undefined') {
+  (async () => {
+    try {
+      const { data, error } = await publicSupabase
+        .from('products')
+        .select('id')
+        .limit(1);
+      if (error) {
+        normalizeError(error);
+      } else {
+        console.log('🔍 Supabase initial connectivity check passed');
+      }
+    } catch (err) {
+      normalizeError(err);
+    }
+  })();
+}
+
 export const auth = {
   // Sign up with email and password
   signUp: async (email: string, password: string, fullName?: string) => {
@@ -111,8 +175,14 @@ export const profiles = {
 export const products = {
   // Get all products
   getAll: async () => {
+    if (supabaseInvalidApiKey) {
+      console.error('❌ Products fetch aborted: invalid Supabase API key');
+      return { data: [], error: new Error('Invalid Supabase API key configured') };
+    }
     try {
       console.log('🔍 Fetching products from products table with category join...');
+      let data: any = null;
+      let error: any = null;
       
       // Check current session to understand authentication state
       const { data: { session } } = await supabase.auth.getSession();
@@ -120,21 +190,21 @@ export const products = {
       
       // Try a simple query first to test connection
       console.log('🧪 Testing basic connection with simple query...');
-      const testResult = await supabase
+      const testResult = await publicSupabase
         .from("products")
         .select("id, name")
         .limit(1);
       
       if (testResult.error) {
         console.error('❌ Basic connection test failed:', testResult.error);
-        return { data: [], error: testResult.error };
+        return { data: [], error: normalizeError(testResult.error) };
       }
       
       console.log('✅ Basic connection test passed, proceeding with full query...');
       
       // Now try the full query
       console.log('📋 Attempting full query...');
-      const result1 = await supabase
+      const result1 = await publicSupabase
         .from("products")
         .select(`
           *,
@@ -162,12 +232,12 @@ export const products = {
             result1.error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected. This might be due to RLS policies.');
           // Return a specific error that the UI can handle
-          return { data: [], error: { ...result1.error, code: 'PERMISSION_DENIED' } };
+          return { data: [], error: normalizeError({ ...result1.error, code: 'PERMISSION_DENIED' }) };
         }
         
         // Approach 2: Try with minimal select
         console.log('📋 Attempting minimal query...');
-        const result2 = await supabase
+        const result2 = await publicSupabase
           .from("products")
           .select('id, name, price, description, image_url, category_id, is_active')
           .limit(10);
@@ -177,7 +247,7 @@ export const products = {
         if (!result2.error) {
           // If minimal query works, try to get categories separately
           console.log('📋 Fetching categories separately...');
-          const { data: categoriesData, error: catError } = await supabase
+          const { data: categoriesData, error: catError } = await publicSupabase
             .from("categories")
             .select('id, name, slug, color');
           
@@ -200,7 +270,7 @@ export const products = {
               result2.error.message?.includes('403') || 
               result2.error.message?.includes('permission')) {
             console.warn('🔐 Authentication/Permission error detected in minimal query. This might be due to RLS policies.');
-            return { data: [], error: { ...result2.error, code: 'PERMISSION_DENIED' } };
+            return { data: [], error: normalizeError({ ...result2.error, code: 'PERMISSION_DENIED' }) };
           }
           data = [];
           error = result2.error;
@@ -231,7 +301,7 @@ export const products = {
         
         if (error) {
           // Don't throw error, return empty array to prevent app crash
-          return { data: [], error };
+          return { data: [], error: normalizeError(error) };
         }
       }
 
@@ -267,7 +337,7 @@ export const products = {
       return { data: transformedData, error: null };
     } catch (err) {
       console.error("Products fetch error:", err);
-      return { data: [], error: err };
+      return { data: [], error: normalizeError(err) };
     }
   },
 
@@ -393,6 +463,10 @@ export const products = {
 export const categories = {
   // Get all categories
   getAll: async () => {
+    if (supabaseInvalidApiKey) {
+      console.error('❌ Categories fetch aborted: invalid Supabase API key');
+      return { data: [], error: new Error('Invalid Supabase API key configured') };
+    }
     try {
       console.log('🔍 Fetching categories from categories table...');
       
@@ -402,14 +476,14 @@ export const categories = {
       
       // Try a simple query first to test connection
       console.log('🧪 Testing categories connection with simple query...');
-      const testResult = await supabase
+      const testResult = await publicSupabase
         .from("categories")
         .select("id, name")
         .limit(1);
       
       if (testResult.error) {
         console.error('❌ Categories connection test failed:', testResult.error);
-        return { data: [], error: testResult.error };
+        return { data: [], error: normalizeError(testResult.error) };
       }
       
       console.log('✅ Categories connection test passed, proceeding with full query...');
@@ -419,7 +493,7 @@ export const categories = {
       
       // Approach 1: Try without any filters
       console.log('📋 Attempting categories query without filters...');
-      const result1 = await supabase
+      const result1 = await publicSupabase
         .from("categories")
         .select("*")
         .order("sort_order", { ascending: true });
@@ -437,12 +511,12 @@ export const categories = {
             result1.error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for categories. This might be due to RLS policies.');
           // Return a specific error that the UI can handle
-          return { data: [], error: { ...result1.error, code: 'PERMISSION_DENIED' } };
+          return { data: [], error: normalizeError({ ...result1.error, code: 'PERMISSION_DENIED' }) };
         }
         
         // Approach 2: Try with minimal select
         console.log('📋 Attempting minimal categories query...');
-        const result2 = await supabase
+        const result2 = await publicSupabase
           .from("categories")
           .select('id, name, slug, color, icon')
           .limit(20);
@@ -458,7 +532,7 @@ export const categories = {
               result2.error.message?.includes('403') || 
               result2.error.message?.includes('permission')) {
             console.warn('🔐 Authentication/Permission error detected in minimal categories query. This might be due to RLS policies.');
-            return { data: [], error: { ...result2.error, code: 'PERMISSION_DENIED' } };
+            return { data: [], error: normalizeError({ ...result2.error, code: 'PERMISSION_DENIED' }) };
           }
           data = [];
           error = result2.error;
@@ -470,7 +544,7 @@ export const categories = {
       if (error) {
         console.error("Categories API Error:", error);
         // Don't throw error, return empty array to prevent app crash
-        return { data: [], error };
+        return { data: [], error: normalizeError(error) };
       }
 
       // Filter active categories on client side
@@ -489,7 +563,7 @@ export const categories = {
       return { data: activeCategories, error: null };
     } catch (err) {
       console.error("Categories fetch error:", err);
-      return { data: [], error: err };
+      return { data: [], error: normalizeError(err) };
     }
   },
 };
@@ -527,7 +601,7 @@ export const cart = {
           console.warn('🔐 Authentication/Permission error detected for cart. This might be due to RLS policies.');
           return { data: [], error: { ...error, code: 'PERMISSION_DENIED' } };
         }
-        return { data: [], error };
+        return { data: [], error: normalizeError(error) };
       }
       
       if (data) {
@@ -553,7 +627,7 @@ export const cart = {
       return { data: data || [], error: null };
     } catch (err) {
       console.error("❌ Cart fetch error:", err);
-      return { data: [], error: err };
+      return { data: [], error: normalizeError(err) };
     }
   },
 
@@ -582,16 +656,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart addItem. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Item added to cart successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart addItem error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 
@@ -621,16 +695,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart updateQuantity. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Cart item quantity updated successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart updateQuantity error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 
@@ -651,16 +725,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart removeItem. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Item removed from cart successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart removeItem error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 
@@ -680,16 +754,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart clearCart. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Cart cleared successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart clearCart error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 };
@@ -872,7 +946,7 @@ export const notifications = {
       p_type: type,
       p_action_url: actionUrl
     });
-    return { data: null, error };
+    return { data: null, error: normalizeError(error) };
   },
 };
 

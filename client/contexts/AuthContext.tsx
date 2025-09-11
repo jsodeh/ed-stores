@@ -101,19 +101,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🚪 AuthContext: Starting sign out process');
       await auth.signOut();
       console.log('✅ AuthContext: Sign out successful');
-      // The auth state change listener will handle setting user, profile, and session to null
-      // But we can also set them here as a backup
-      setUser(null);
-      setProfile(null);
-      setSession(null);
     } catch (error) {
       console.error('❌ AuthContext: Error during sign out:', error);
-      // Even if there's an error, clear the local state
+    } finally {
+      // Ensure local state is cleared
       setUser(null);
       setProfile(null);
       setSession(null);
-    } finally {
+
+      // Aggressively clear any persisted Supabase auth tokens from storage
+      try {
+        if (typeof window !== 'undefined') {
+          const clear = (storage: Storage) => {
+            const keys: string[] = [];
+            for (let i = 0; i < storage.length; i++) {
+              const k = storage.key(i);
+              if (!k) continue;
+              if (k.startsWith('sb-') || k.includes('supabase') || k === 'sb-public') {
+                keys.push(k);
+              }
+            }
+            keys.forEach(k => storage.removeItem(k));
+          };
+          clear(window.localStorage);
+          clear(window.sessionStorage);
+        }
+      } catch (e) {
+        console.warn('Auth storage clear warning:', e);
+      }
+
       setLoading(false);
+
+      // Hard redirect to home to ensure clean app state
+      if (typeof window !== 'undefined') {
+        window.location.assign('/');
+      }
     }
   };
 
