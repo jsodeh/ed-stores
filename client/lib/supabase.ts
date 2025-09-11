@@ -58,6 +58,15 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// A secondary client without user session for public, cacheable reads
+export const publicSupabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
+  },
+});
+
 // Helper functions for auth
 // Initial lightweight validation to detect invalid API keys early
 if (typeof window !== 'undefined') {
@@ -180,7 +189,7 @@ export const products = {
       
       // Try a simple query first to test connection
       console.log('🧪 Testing basic connection with simple query...');
-      const testResult = await supabase
+      const testResult = await publicSupabase
         .from("products")
         .select("id, name")
         .limit(1);
@@ -194,7 +203,7 @@ export const products = {
       
       // Now try the full query
       console.log('📋 Attempting full query...');
-      const result1 = await supabase
+      const result1 = await publicSupabase
         .from("products")
         .select(`
           *,
@@ -227,7 +236,7 @@ export const products = {
         
         // Approach 2: Try with minimal select
         console.log('📋 Attempting minimal query...');
-        const result2 = await supabase
+        const result2 = await publicSupabase
           .from("products")
           .select('id, name, price, description, image_url, category_id, is_active')
           .limit(10);
@@ -237,7 +246,7 @@ export const products = {
         if (!result2.error) {
           // If minimal query works, try to get categories separately
           console.log('📋 Fetching categories separately...');
-          const { data: categoriesData, error: catError } = await supabase
+          const { data: categoriesData, error: catError } = await publicSupabase
             .from("categories")
             .select('id, name, slug, color');
           
@@ -466,7 +475,7 @@ export const categories = {
       
       // Try a simple query first to test connection
       console.log('🧪 Testing categories connection with simple query...');
-      const testResult = await supabase
+      const testResult = await publicSupabase
         .from("categories")
         .select("id, name")
         .limit(1);
@@ -483,7 +492,7 @@ export const categories = {
       
       // Approach 1: Try without any filters
       console.log('📋 Attempting categories query without filters...');
-      const result1 = await supabase
+      const result1 = await publicSupabase
         .from("categories")
         .select("*")
         .order("sort_order", { ascending: true });
@@ -506,7 +515,7 @@ export const categories = {
         
         // Approach 2: Try with minimal select
         console.log('📋 Attempting minimal categories query...');
-        const result2 = await supabase
+        const result2 = await publicSupabase
           .from("categories")
           .select('id, name, slug, color, icon')
           .limit(20);
