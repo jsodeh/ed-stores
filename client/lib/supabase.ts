@@ -2,11 +2,14 @@ import type { Database } from "@shared/database.types";
 import type { Database } from "@shared/database.types";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://isgqdllaunoydbjweiwo.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzZ3FkbGxhdW5veWRiandlaXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc1MTc2MDcsImV4cCI6MjA1MzA5MzYwN30.O-w9MXPBBpMcWXUrH5dGqaorZNFzJ2jKi2LuGKmnXps";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Debug: Log what credentials are being used
 console.log('🔧 Supabase Configuration Debug:');
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase env vars. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+}
 console.log('📍 URL:', supabaseUrl);
 console.log('🔑 API Key (first 20 chars):', supabaseAnonKey.substring(0, 20) + '...');
 console.log('🌍 Environment variables loaded:', {
@@ -312,7 +315,7 @@ export const products = {
             // Remove nested category object to avoid confusion
             categories: undefined
           };
-          console.log('🔍 Transformed product:', product.name, 'category:', transformed.category_name);
+          console.log('��� Transformed product:', product.name, 'category:', transformed.category_name);
           return transformed;
         });
       
