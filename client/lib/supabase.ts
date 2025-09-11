@@ -171,6 +171,8 @@ export const products = {
     }
     try {
       console.log('🔍 Fetching products from products table with category join...');
+      let data: any = null;
+      let error: any = null;
       
       // Check current session to understand authentication state
       const { data: { session } } = await supabase.auth.getSession();
@@ -315,7 +317,7 @@ export const products = {
             // Remove nested category object to avoid confusion
             categories: undefined
           };
-          console.log('��� Transformed product:', product.name, 'category:', transformed.category_name);
+          console.log('🔍 Transformed product:', product.name, 'category:', transformed.category_name);
           return transformed;
         });
       
