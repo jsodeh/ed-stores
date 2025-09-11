@@ -56,6 +56,25 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 });
 
 // Helper functions for auth
+// Initial lightweight validation to detect invalid API keys early
+if (typeof window !== 'undefined') {
+  (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id')
+        .limit(1);
+      if (error) {
+        normalizeError(error);
+      } else {
+        console.log('🔍 Supabase initial connectivity check passed');
+      }
+    } catch (err) {
+      normalizeError(err);
+    }
+  })();
+}
+
 export const auth = {
   // Sign up with email and password
   signUp: async (email: string, password: string, fullName?: string) => {
