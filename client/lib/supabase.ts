@@ -1,4 +1,5 @@
 import type { Database } from "@shared/database.types";
+import type { Database } from "@shared/database.types";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://isgqdllaunoydbjweiwo.supabase.co";
@@ -14,6 +15,25 @@ console.log('🌍 Environment variables loaded:', {
   nodeEnv: import.meta.env.NODE_ENV,
   mode: import.meta.env.MODE
 });
+
+function normalizeError(err: any): Error | null {
+  if (!err) return null;
+  if (err instanceof Error) return err;
+  try {
+    const parts: string[] = [];
+    if (err.message) parts.push(err.message);
+    if (err.status) parts.push(`status: ${err.status}`);
+    if (err.code) parts.push(`code: ${err.code}`);
+    if (err.details) parts.push(`details: ${JSON.stringify(err.details)}`);
+    if (parts.length === 0) parts.push(JSON.stringify(err));
+    const message = parts.join(' | ');
+    const e = new Error(message);
+    (e as any).original = err;
+    return e;
+  } catch {
+    return new Error(String(err));
+  }
+}
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -127,7 +147,7 @@ export const products = {
       
       if (testResult.error) {
         console.error('❌ Basic connection test failed:', testResult.error);
-        return { data: [], error: testResult.error };
+        return { data: [], error: normalizeError(testResult.error) };
       }
       
       console.log('✅ Basic connection test passed, proceeding with full query...');
@@ -162,7 +182,7 @@ export const products = {
             result1.error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected. This might be due to RLS policies.');
           // Return a specific error that the UI can handle
-          return { data: [], error: { ...result1.error, code: 'PERMISSION_DENIED' } };
+          return { data: [], error: normalizeError({ ...result1.error, code: 'PERMISSION_DENIED' }) };
         }
         
         // Approach 2: Try with minimal select
@@ -200,7 +220,7 @@ export const products = {
               result2.error.message?.includes('403') || 
               result2.error.message?.includes('permission')) {
             console.warn('🔐 Authentication/Permission error detected in minimal query. This might be due to RLS policies.');
-            return { data: [], error: { ...result2.error, code: 'PERMISSION_DENIED' } };
+            return { data: [], error: normalizeError({ ...result2.error, code: 'PERMISSION_DENIED' }) };
           }
           data = [];
           error = result2.error;
@@ -231,7 +251,7 @@ export const products = {
         
         if (error) {
           // Don't throw error, return empty array to prevent app crash
-          return { data: [], error };
+          return { data: [], error: normalizeError(error) };
         }
       }
 
@@ -267,7 +287,7 @@ export const products = {
       return { data: transformedData, error: null };
     } catch (err) {
       console.error("Products fetch error:", err);
-      return { data: [], error: err };
+      return { data: [], error: normalizeError(err) };
     }
   },
 
@@ -409,7 +429,7 @@ export const categories = {
       
       if (testResult.error) {
         console.error('❌ Categories connection test failed:', testResult.error);
-        return { data: [], error: testResult.error };
+        return { data: [], error: normalizeError(testResult.error) };
       }
       
       console.log('✅ Categories connection test passed, proceeding with full query...');
@@ -437,7 +457,7 @@ export const categories = {
             result1.error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for categories. This might be due to RLS policies.');
           // Return a specific error that the UI can handle
-          return { data: [], error: { ...result1.error, code: 'PERMISSION_DENIED' } };
+          return { data: [], error: normalizeError({ ...result1.error, code: 'PERMISSION_DENIED' }) };
         }
         
         // Approach 2: Try with minimal select
@@ -458,7 +478,7 @@ export const categories = {
               result2.error.message?.includes('403') || 
               result2.error.message?.includes('permission')) {
             console.warn('🔐 Authentication/Permission error detected in minimal categories query. This might be due to RLS policies.');
-            return { data: [], error: { ...result2.error, code: 'PERMISSION_DENIED' } };
+            return { data: [], error: normalizeError({ ...result2.error, code: 'PERMISSION_DENIED' }) };
           }
           data = [];
           error = result2.error;
@@ -470,7 +490,7 @@ export const categories = {
       if (error) {
         console.error("Categories API Error:", error);
         // Don't throw error, return empty array to prevent app crash
-        return { data: [], error };
+        return { data: [], error: normalizeError(error) };
       }
 
       // Filter active categories on client side
@@ -489,7 +509,7 @@ export const categories = {
       return { data: activeCategories, error: null };
     } catch (err) {
       console.error("Categories fetch error:", err);
-      return { data: [], error: err };
+      return { data: [], error: normalizeError(err) };
     }
   },
 };
@@ -527,7 +547,7 @@ export const cart = {
           console.warn('🔐 Authentication/Permission error detected for cart. This might be due to RLS policies.');
           return { data: [], error: { ...error, code: 'PERMISSION_DENIED' } };
         }
-        return { data: [], error };
+        return { data: [], error: normalizeError(error) };
       }
       
       if (data) {
@@ -553,7 +573,7 @@ export const cart = {
       return { data: data || [], error: null };
     } catch (err) {
       console.error("❌ Cart fetch error:", err);
-      return { data: [], error: err };
+      return { data: [], error: normalizeError(err) };
     }
   },
 
@@ -582,16 +602,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart addItem. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Item added to cart successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart addItem error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 
@@ -621,16 +641,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart updateQuantity. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Cart item quantity updated successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart updateQuantity error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 
@@ -651,16 +671,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart removeItem. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Item removed from cart successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart removeItem error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 
@@ -680,16 +700,16 @@ export const cart = {
             error.message?.includes('403') || 
             error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart clearCart. This might be due to RLS policies.');
-          return { data: null, error: { ...error, code: 'PERMISSION_DENIED' } };
+          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
-        return { data: null, error };
+        return { data: null, error: normalizeError(error) };
       }
       
       console.log('✅ Cart cleared successfully');
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart clearCart error:", err);
-      return { data: null, error: err };
+      return { data: null, error: normalizeError(err) };
     }
   },
 };
@@ -872,7 +892,7 @@ export const notifications = {
       p_type: type,
       p_action_url: actionUrl
     });
-    return { data: null, error };
+    return { data: null, error: normalizeError(error) };
   },
 };
 
