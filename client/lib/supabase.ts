@@ -118,17 +118,23 @@ export const products = {
       const { data: { session } } = await supabase.auth.getSession();
       console.log('🔐 Current session:', session ? 'Authenticated' : 'Anonymous');
       
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
-      );
+      // Try a simple query first to test connection
+      console.log('🧪 Testing basic connection with simple query...');
+      const testResult = await supabase
+        .from("products")
+        .select("id, name")
+        .limit(1);
       
-      // Try multiple approaches to get data
-      let data, error;
+      if (testResult.error) {
+        console.error('❌ Basic connection test failed:', testResult.error);
+        return { data: [], error: testResult.error };
+      }
       
-      // Approach 1: Try without any filters first
-      console.log('📋 Attempting query without filters...');
-      const queryPromise = supabase
+      console.log('✅ Basic connection test passed, proceeding with full query...');
+      
+      // Now try the full query
+      console.log('📋 Attempting full query...');
+      const result1 = await supabase
         .from("products")
         .select(`
           *,
@@ -140,8 +146,6 @@ export const products = {
           )
         `)
         .order("created_at", { ascending: false });
-      
-      const result1 = await Promise.race([queryPromise, timeoutPromise]);
       
       console.log('🔍 Raw query result:', result1);
       
@@ -395,6 +399,20 @@ export const categories = {
       // Check current session to understand authentication state
       const { data: { session } } = await supabase.auth.getSession();
       console.log('🔐 Current session for categories:', session ? 'Authenticated' : 'Anonymous');
+      
+      // Try a simple query first to test connection
+      console.log('🧪 Testing categories connection with simple query...');
+      const testResult = await supabase
+        .from("categories")
+        .select("id, name")
+        .limit(1);
+      
+      if (testResult.error) {
+        console.error('❌ Categories connection test failed:', testResult.error);
+        return { data: [], error: testResult.error };
+      }
+      
+      console.log('✅ Categories connection test passed, proceeding with full query...');
       
       // Try multiple approaches
       let data, error;
