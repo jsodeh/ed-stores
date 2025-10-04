@@ -87,8 +87,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Load initial data
   useEffect(() => {
     // Load data when component mounts
-    // Only load if we don't already have products and aren't currently loading
-    if (productsData.length === 0 && !loading) {
+    // Only prevent loading if we already have products loaded
+    if (productsData.length === 0) {
       loadInitialData();
     }
   }, []);
@@ -167,12 +167,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "products" },
-        () => {
-          // Only refresh products if we're not already loading initial data
-          if (!loading) {
-            refreshProducts();
-          }
-        },
+        () => refreshProducts(),
       )
       .subscribe((status) => {
         console.log('📡 Products subscription status:', status);
@@ -208,16 +203,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         cartSubscription.unsubscribe();
       }
     };
-  }, [user, isAuthenticated, loading]);
+  }, [user, isAuthenticated]);
 
   const loadInitialData = async () => {
     console.log('🚀 StoreContext: Starting loadInitialData');
-    // Prevent duplicate loading calls
-    if (loading) {
-      console.log('⏭️ StoreContext: Skipping loadInitialData, already loading');
-      return;
-    }
-    
     setLoading(true);
 
     try {
@@ -239,12 +228,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshProducts = async () => {
-    // Prevent duplicate calls while loading
-    if (loading && productsData.length > 0) {
-      console.log('⏭️ StoreContext: Skipping refreshProducts, already loading');
-      return;
-    }
-    
     try {
       console.log('🔍 StoreContext: Starting refreshProducts');
       setHasConnectionError(false);
@@ -284,12 +267,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshCategories = async () => {
-    // Prevent duplicate calls while loading
-    if (loading && categoriesData.length > 0) {
-      console.log('⏭️ StoreContext: Skipping refreshCategories, already loading');
-      return;
-    }
-    
     try {
       console.log('🔍 StoreContext: Starting refreshCategories');
       const { data, error } = await categories.getAll();
@@ -327,12 +304,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshCart = async () => {
     if (!user) return;
-    
-    // Prevent duplicate calls while loading
-    if (cartLoading) {
-      console.log('⏭️ StoreContext: Skipping refreshCart, already loading');
-      return;
-    }
 
     setCartLoading(true);
     try {
