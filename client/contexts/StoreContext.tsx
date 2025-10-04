@@ -86,11 +86,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Load initial data
   useEffect(() => {
-    // Load data when component mounts
-    // Only prevent loading if we already have products loaded
-    if (productsData.length === 0) {
-      loadInitialData();
-    }
+    const loadData = async () => {
+      console.log('🚀 StoreContext: Loading initial data');
+      setLoading(true);
+      
+      try {
+        // Load products and categories in parallel
+        const [productsResult, categoriesResult] = await Promise.all([
+          products.getAll(),
+          categories.getAll()
+        ]);
+        
+        // Set products data
+        if (productsResult.error) {
+          console.error('❌ StoreContext: Error loading products:', productsResult.error);
+          setProductsData([]);
+        } else {
+          console.log('✅ StoreContext: Loaded products:', productsResult.data?.length || 0);
+          setProductsData(productsResult.data || []);
+        }
+        
+        // Set categories data
+        if (categoriesResult.error) {
+          console.error('❌ StoreContext: Error loading categories:', categoriesResult.error);
+          setCategoriesData([]);
+        } else {
+          console.log('✅ StoreContext: Loaded categories:', categoriesResult.data?.length || 0);
+          setCategoriesData(categoriesResult.data || []);
+        }
+        
+        console.log('✅ StoreContext: Initial data loaded successfully');
+      } catch (error) {
+        console.error('❌ StoreContext: Error loading initial data:', error);
+        setProductsData([]);
+        setCategoriesData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
 
   // Reload data when authentication state changes
@@ -167,7 +202,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "products" },
-        () => refreshProducts(),
+        () => {
+          // Refresh products when changes occur
+          refreshProducts();
+        },
       )
       .subscribe((status) => {
         console.log('📡 Products subscription status:', status);
@@ -205,31 +243,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [user, isAuthenticated]);
 
-  const loadInitialData = async () => {
-    console.log('🚀 StoreContext: Starting loadInitialData');
-    setLoading(true);
 
-    try {
-      console.log('📊 StoreContext: Loading products and categories in parallel');
-      await Promise.all([refreshProducts(), refreshCategories()]);
-      console.log('✅ StoreContext: Initial data load completed');
-    } catch (error) {
-      console.error("❌ StoreContext: Failed to load initial data:", error);
-      // Show user-friendly error message
-      toast({
-        title: "Connection Error",
-        description: "Unable to load products and categories. Please check your connection and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      console.log('🏁 StoreContext: Loading state set to false');
-    }
-  };
 
   const refreshProducts = async () => {
     try {
-      console.log('🔍 StoreContext: Starting refreshProducts');
+      console.log('🔍 StoreContext: Refreshing products');
       setHasConnectionError(false);
       const { data, error } = await products.getAll();
       console.log('📦 StoreContext: Products query response:', { data, error, count: data?.length });
@@ -268,7 +286,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshCategories = async () => {
     try {
-      console.log('🔍 StoreContext: Starting refreshCategories');
+      console.log('🔍 StoreContext: Refreshing categories');
       const { data, error } = await categories.getAll();
       console.log('📦 StoreContext: Categories query response:', { data, error, count: data?.length });
       
@@ -299,6 +317,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         description: "Failed to load categories. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const loadInitialData = async () => {
+    console.log('🚀 StoreContext: Loading initial data');
+    setLoading(true);
+    
+    try {
+      // Load products and categories in parallel
+      const [productsResult, categoriesResult] = await Promise.all([
+        products.getAll(),
+        categories.getAll()
+      ]);
+      
+      // Set products data
+      if (productsResult.error) {
+        console.error('Error loading products:', productsResult.error);
+        setProductsData([]);
+      } else {
+        setProductsData(productsResult.data || []);
+      }
+      
+      // Set categories data
+      if (categoriesResult.error) {
+        console.error('Error loading categories:', categoriesResult.error);
+        setCategoriesData([]);
+      } else {
+        setCategoriesData(categoriesResult.data || []);
+      }
+      
+      console.log('✅ StoreContext: Initial data loaded');
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+      setProductsData([]);
+      setCategoriesData([]);
+    } finally {
+      setLoading(false);
     }
   };
 
