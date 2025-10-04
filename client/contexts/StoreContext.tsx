@@ -242,8 +242,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error("❌ StoreContext: Error loading products:", error);
         // Check if it's an authentication error
-        if (error.message?.includes('401') || error.message?.includes('authentication') || error.code === 'PERMISSION_DENIED') {
-          console.warn("🔐 StoreContext: Authentication required for products. This might be due to RLS policies.");
+        if (error.message?.includes('401') || error.message?.includes('authentication') || error.message?.includes('403') || error.code === 'PERMISSION_DENIED') {
+          console.warn("🔐 StoreContext: Authentication/Permission error for products. This might be due to RLS policies.");
           setHasConnectionError(true);
           toast({
             title: "Access Denied",
@@ -280,8 +280,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error("❌ StoreContext: Error loading categories:", error);
         // Check if it's an authentication error
-        if (error.message?.includes('401') || error.message?.includes('authentication') || error.code === 'PERMISSION_DENIED') {
-          console.warn("🔐 StoreContext: Authentication required for categories. This might be due to RLS policies.");
+        if (error.message?.includes('401') || error.message?.includes('authentication') || error.message?.includes('403') || error.code === 'PERMISSION_DENIED') {
+          console.warn("🔐 StoreContext: Authentication/Permission error for categories. This might be due to RLS policies.");
           toast({
             title: "Access Denied",
             description: "You don't have permission to view categories. Please contact support.",
