@@ -2,6 +2,19 @@ import { Button } from "@/components/ui/button";
 import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 
+const splitCategoryName = (name: string): string[] => {
+  const words = name.trim().split(/\s+/);
+  if (words.length <= 1) {
+    return [name];
+  }
+
+  const midpoint = Math.ceil(words.length / 2);
+  const firstLine = words.slice(0, midpoint).join(" ");
+  const secondLine = words.slice(midpoint).join(" ");
+
+  return secondLine ? [firstLine, secondLine] : [firstLine];
+};
+
 export function Categories() {
   const { setSelectedCategory, selectedCategory, categories } = useStore();
   const navigate = useNavigate();
@@ -57,8 +70,12 @@ export function Categories() {
                   >
                     {category.icon || "📦"}
                   </div>
-                  <span className="text-xs font-medium text-gray-700 text-center line-clamp-2">
-                    {category.name}
+                  <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                    {splitCategoryName(category.name).map((line, index) => (
+                      <span key={index} className="block">
+                        {line}
+                      </span>
+                    ))}
                   </span>
                 </button>
               );
