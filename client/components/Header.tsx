@@ -1,4 +1,4 @@
-import { QrCode, ShoppingCart } from "lucide-react";
+import { Menu, ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +23,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button 
+          <button
             className="relative"
             onClick={() => navigate("/cart")}
           >
@@ -34,11 +34,7 @@ export function Header() {
               </span>
             )}
           </button>
-          
-          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <QrCode className="h-4 w-4 text-gray-600" />
-          </div>
-          
+
           {user ? (
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-medium">
@@ -46,11 +42,11 @@ export function Header() {
               </span>
             </div>
           ) : (
-            <button 
+            <button
               className="w-8 h-8 bg-primary rounded-full flex items-center justify-center"
               onClick={() => setIsAuthModalOpen(true)}
             >
-              <span className="text-white text-xs font-medium">GO</span>
+              <Menu className="h-4 w-4 text-white" />
             </button>
           )}
         </div>
