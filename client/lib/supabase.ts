@@ -1,5 +1,4 @@
 import type { Database } from "@shared/database.types";
-import type { Database } from "@shared/database.types";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -11,7 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase env vars. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
 }
 console.log('📍 URL:', supabaseUrl);
-console.log('🔑 API Key (first 20 chars):', supabaseAnonKey.substring(0, 20) + '...');
+console.log('🔑 API Key (first 20 chars):', supabaseAnonKey?.substring(0, 20) + '...');
 console.log('🌍 Environment variables loaded:', {
   hasUrl: !!import.meta.env.VITE_SUPABASE_URL,
   hasKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -56,6 +55,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
   },
+  global: {
+    headers: {
+      'x-application-origin': 'ed-stores-client'
+    }
+  }
 });
 
 // A secondary client without user session for public, cacheable reads
@@ -66,6 +70,11 @@ export const publicSupabase = createClient<Database>(supabaseUrl, supabaseAnonKe
     detectSessionInUrl: false,
     storageKey: 'sb-public',
   },
+  global: {
+    headers: {
+      'x-application-origin': 'ed-stores-public'
+    }
+  }
 });
 
 // Helper functions for auth
@@ -141,11 +150,13 @@ export const auth = {
 export const profiles = {
   // Get user profile
   getProfile: async (userId: string) => {
-    const { data, error } = await supabase
+    console.log('👤 profiles.getProfile: Fetching profile for user:', userId);
+    const { data, error } = await publicSupabase
       .from("user_profiles")
       .select("*")
       .eq("id", userId)
       .single();
+    console.log('👤 profiles.getProfile: Result for user', userId, { data, error });
     return { data, error };
   },
 
@@ -162,181 +173,59 @@ export const profiles = {
 
   // Check if user is admin
   isAdmin: async (userId: string) => {
-    const { data } = await supabase
+    console.log('🔐 profiles.isAdmin: Checking admin status for user:', userId);
+    const { data } = await publicSupabase
       .from("user_profiles")
       .select("role")
       .eq("id", userId)
       .single();
-    return data?.role === "admin" || data?.role === "super_admin";
+    const isAdmin = data?.role === "admin" || data?.role === "super_admin";
+    console.log('🔐 profiles.isAdmin: Result for user', userId, { role: data?.role, isAdmin });
+    return isAdmin;
   },
 };
 
 // Helper functions for products
 export const products = {
-  // Get all products
+  // Get all products - optimized for product_details view
   getAll: async () => {
     if (supabaseInvalidApiKey) {
       console.error('❌ Products fetch aborted: invalid Supabase API key');
       return { data: [], error: new Error('Invalid Supabase API key configured') };
     }
     try {
-      console.log('🔍 Fetching products from products table with category join...');
-      let data: any = null;
-      let error: any = null;
+      console.log('🔍 Fetching products from product_details view...');
       
-      // Check current session to understand authentication state
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔐 Current session:', session ? 'Authenticated' : 'Anonymous');
-      
-      // Try a simple query first to test connection
-      console.log('🧪 Testing basic connection with simple query...');
-      const testResult = await publicSupabase
-        .from("products")
-        .select("id, name")
-        .limit(1);
-      
-      if (testResult.error) {
-        console.error('❌ Basic connection test failed:', testResult.error);
-        return { data: [], error: normalizeError(testResult.error) };
-      }
-      
-      console.log('✅ Basic connection test passed, proceeding with full query...');
-      
-      // Now try the full query
-      console.log('📋 Attempting full query...');
-      const result1 = await publicSupabase
-        .from("products")
-        .select(`
-          *,
-          categories:category_id (
-            id,
-            name,
-            slug,
-            color
-          )
-        `)
+      // Use the publicSupabase client for read operations to avoid auth issues
+      const { data, error } = await publicSupabase
+        .from("product_details")
+        .select("*")
         .order("created_at", { ascending: false });
       
-      console.log('🔍 Raw query result:', result1);
-      
-      if (!result1.error) {
-        data = result1.data;
-        error = result1.error;
-        console.log('✅ Query without filters succeeded');
-      } else {
-        console.log('❌ Query without filters failed:', result1.error);
-        
-        // Check if it's an authentication/permission error
-        if (result1.error.message?.includes('401') || 
-            result1.error.message?.includes('403') || 
-            result1.error.message?.includes('permission')) {
-          console.warn('🔐 Authentication/Permission error detected. This might be due to RLS policies.');
-          // Return a specific error that the UI can handle
-          return { data: [], error: normalizeError({ ...result1.error, code: 'PERMISSION_DENIED' }) };
-        }
-        
-        // Approach 2: Try with minimal select
-        console.log('📋 Attempting minimal query...');
-        const result2 = await publicSupabase
-          .from("products")
-          .select('id, name, price, description, image_url, category_id, is_active')
-          .limit(10);
-        
-        console.log('🔍 Minimal query result:', result2);
-        
-        if (!result2.error) {
-          // If minimal query works, try to get categories separately
-          console.log('📋 Fetching categories separately...');
-          const { data: categoriesData, error: catError } = await publicSupabase
-            .from("categories")
-            .select('id, name, slug, color');
-          
-          console.log('🔍 Categories separate query:', { data: categoriesData, error: catError });
-          
-          // Manually join the data
-          data = result2.data?.map(product => {
-            const category = categoriesData?.find(cat => cat.id === product.category_id);
-            return {
-              ...product,
-              categories: category
-            };
-          });
-          error = null;
-          console.log('✅ Minimal query with manual join succeeded');
-        } else {
-          console.log('❌ All query attempts failed');
-          // Check if it's an authentication/permission error
-          if (result2.error.message?.includes('401') || 
-              result2.error.message?.includes('403') || 
-              result2.error.message?.includes('permission')) {
-            console.warn('🔐 Authentication/Permission error detected in minimal query. This might be due to RLS policies.');
-            return { data: [], error: normalizeError({ ...result2.error, code: 'PERMISSION_DENIED' }) };
-          }
-          data = [];
-          error = result2.error;
-        }
-      }
-
-      console.log('📦 Products query result:', { data, error, count: data?.length });
+      console.log('🔍 Raw products query result:', { data, error, count: data?.length });
       
       if (error) {
-        console.error("Products API Error:", error);
-        
-        // Try a simple fallback query
-        console.log('🔄 Trying simple fallback query...');
-        try {
-          const fallbackResult = await supabase
-            .from("products")
-            .select("*")
-            .limit(10);
-          
-          if (!fallbackResult.error && fallbackResult.data) {
-            console.log('✅ Fallback query succeeded:', fallbackResult.data.length, 'items');
-            data = fallbackResult.data;
-            error = null;
-          }
-        } catch (fallbackError) {
-          console.error('❌ Fallback query also failed:', fallbackError);
-        }
-        
-        if (error) {
-          // Don't throw error, return empty array to prevent app crash
-          return { data: [], error: normalizeError(error) };
-        }
+        console.error("❌ Products API Error:", error);
+        // Don't throw error, return empty array to prevent app crash
+        return { data: [], error: normalizeError(error) };
       }
 
-      // Transform and filter data on client side
-      console.log('🔍 Raw products data before transformation:', data?.length, 'items');
+      // Filter active products on client side
+      console.log('🔍 Raw products data before filtering:', data?.length, 'items');
       
-      const transformedData = (data || [])
-        .filter(product => {
-          const isActive = product.is_active !== false;
-          if (!isActive) {
-            console.log('🔍 Filtering out inactive product:', product.name, 'is_active:', product.is_active);
-          }
-          return isActive;
-        })
-        .map(product => {
-          const transformed = {
-            ...product,
-            category_name: product.categories?.name || null,
-            category_slug: product.categories?.slug || null,
-            category_color: product.categories?.color || null,
-            average_rating: 0,
-            review_count: 0,
-            // Remove nested category object to avoid confusion
-            categories: undefined
-          };
-          console.log('🔍 Transformed product:', product.name, 'category:', transformed.category_name);
-          return transformed;
-        });
+      const activeProducts = (data || []).filter(product => {
+        const isActive = product.is_active !== false;
+        if (!isActive) {
+          console.log('🔍 Filtering out inactive product:', product.name, 'is_active:', product.is_active);
+        }
+        return isActive;
+      });
       
-      console.log('🔍 Final transformed products:', transformedData.length, 'items');
-      
-      console.log('✅ Products transformed and filtered:', transformedData.length);
-      return { data: transformedData, error: null };
+      console.log('🔍 Final filtered products:', activeProducts.length, 'items');
+      console.log('✅ Active products filtered:', activeProducts.length);
+      return { data: activeProducts, error: null };
     } catch (err) {
-      console.error("Products fetch error:", err);
+      console.error("❌ Products fetch error:", err);
       return { data: [], error: normalizeError(err) };
     }
   },
@@ -461,7 +350,7 @@ export const products = {
 
 // Helper functions for categories
 export const categories = {
-  // Get all categories
+  // Get all categories - original version with fixes
   getAll: async () => {
     if (supabaseInvalidApiKey) {
       console.error('❌ Categories fetch aborted: invalid Supabase API key');
@@ -470,79 +359,16 @@ export const categories = {
     try {
       console.log('🔍 Fetching categories from categories table...');
       
-      // Check current session to understand authentication state
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔐 Current session for categories:', session ? 'Authenticated' : 'Anonymous');
-      
-      // Try a simple query first to test connection
-      console.log('🧪 Testing categories connection with simple query...');
-      const testResult = await publicSupabase
-        .from("categories")
-        .select("id, name")
-        .limit(1);
-      
-      if (testResult.error) {
-        console.error('❌ Categories connection test failed:', testResult.error);
-        return { data: [], error: normalizeError(testResult.error) };
-      }
-      
-      console.log('✅ Categories connection test passed, proceeding with full query...');
-      
-      // Try multiple approaches
-      let data, error;
-      
-      // Approach 1: Try without any filters
-      console.log('📋 Attempting categories query without filters...');
-      const result1 = await publicSupabase
+      // Use the publicSupabase client for read operations to avoid auth issues
+      const { data, error } = await publicSupabase
         .from("categories")
         .select("*")
         .order("sort_order", { ascending: true });
       
-      if (!result1.error) {
-        data = result1.data;
-        error = result1.error;
-        console.log('✅ Categories query without filters succeeded');
-      } else {
-        console.log('❌ Categories query failed:', result1.error);
-        
-        // Check if it's an authentication/permission error
-        if (result1.error.message?.includes('401') || 
-            result1.error.message?.includes('403') || 
-            result1.error.message?.includes('permission')) {
-          console.warn('🔐 Authentication/Permission error detected for categories. This might be due to RLS policies.');
-          // Return a specific error that the UI can handle
-          return { data: [], error: normalizeError({ ...result1.error, code: 'PERMISSION_DENIED' }) };
-        }
-        
-        // Approach 2: Try with minimal select
-        console.log('📋 Attempting minimal categories query...');
-        const result2 = await publicSupabase
-          .from("categories")
-          .select('id, name, slug, color, icon')
-          .limit(20);
-        
-        if (!result2.error) {
-          data = result2.data;
-          error = null;
-          console.log('✅ Minimal categories query succeeded');
-        } else {
-          console.log('❌ All categories query attempts failed');
-          // Check if it's an authentication/permission error
-          if (result2.error.message?.includes('401') || 
-              result2.error.message?.includes('403') || 
-              result2.error.message?.includes('permission')) {
-            console.warn('🔐 Authentication/Permission error detected in minimal categories query. This might be due to RLS policies.');
-            return { data: [], error: normalizeError({ ...result2.error, code: 'PERMISSION_DENIED' }) };
-          }
-          data = [];
-          error = result2.error;
-        }
-      }
-
-      console.log('📦 Categories query result:', { data, error, count: data?.length });
+      console.log('🔍 Raw categories query result:', { data, error, count: data?.length });
       
       if (error) {
-        console.error("Categories API Error:", error);
+        console.error("❌ Categories API Error:", error);
         // Don't throw error, return empty array to prevent app crash
         return { data: [], error: normalizeError(error) };
       }
@@ -562,7 +388,7 @@ export const categories = {
       console.log('✅ Active categories filtered:', activeCategories.length);
       return { data: activeCategories, error: null };
     } catch (err) {
-      console.error("Categories fetch error:", err);
+      console.error("❌ Categories fetch error:", err);
       return { data: [], error: normalizeError(err) };
     }
   },
@@ -570,7 +396,7 @@ export const categories = {
 
 // Helper functions for cart
 export const cart = {
-  // Get user's cart
+  // Get user's cart - simplified version
   getCart: async (userId: string) => {
     try {
       console.log('🛒 Fetching cart for user:', userId);

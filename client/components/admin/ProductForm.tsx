@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { Product, Category } from "@shared/database.types";
-import { X, Save, Loader2 } from "lucide-react";
+import { X, Save, Loader2, Upload, Image as ImageIcon } from "lucide-react";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -25,6 +25,8 @@ interface ProductFormProps {
 export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -79,6 +81,60 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           .join("") || "PRD";
       const timestamp = Date.now().toString().slice(-4);
       setFormData((prev) => ({ ...prev, sku: `${prefix}-${timestamp}` }));
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error uploading image. Please try again.');
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (JPEG, PNG, GIF, etc.)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size too large. Please select an image smaller than 5MB.');
+      return;
+    }
+
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      setFormData((prev) => ({ ...prev, image_url: imageUrl }));
     }
   };
 
@@ -268,17 +324,83 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
             </div>
           </div>
 
+          {/* Image Upload Section */}
           <div className="space-y-2">
-            <Label htmlFor="image_url">Image URL</Label>
-            <Input
-              id="image_url"
-              type="url"
-              value={formData.image_url}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, image_url: e.target.value }))
-              }
-              placeholder="/placeholder.svg"
-            />
+            <Label>Product Image</Label>
+            <div className="flex flex-col gap-2">
+              {/* Image Preview */}
+              {formData.image_url && (
+                <div className="relative w-32 h-32">
+                  <img
+                    src={formData.image_url}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-lg border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
+                    onClick={() => setFormData((prev) => ({ ...prev, image_url: "" }))}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+              
+              {/* Upload Button */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Image
+                    </>
+                  )}
+                </Button>
+                <span className="text-sm text-gray-500">
+                  {formData.image_url ? "Replace image" : "No image selected"}
+                </span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Supports JPG, PNG, GIF up to 5MB
+              </p>
+            </div>
+            
+            {/* Fallback URL input (hidden by default but can be shown if needed) */}
+            <div className="mt-2">
+              <Label htmlFor="image_url" className="text-sm font-medium">
+                Or enter image URL
+              </Label>
+              <Input
+                id="image_url"
+                type="url"
+                value={formData.image_url}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, image_url: e.target.value }))
+                }
+                placeholder="https://example.com/image.jpg"
+                className="mt-1"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -320,7 +442,7 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button type="submit" disabled={loading || uploading} className="flex-1">
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

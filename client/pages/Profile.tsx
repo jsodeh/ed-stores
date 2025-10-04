@@ -31,7 +31,7 @@ import { Order } from "@shared/database.types";
 
 export default function Profile() {
   const { cartItemCount, favoriteProducts, cartTotal } = useStore();
-  const { user, profile, isAuthenticated, signOut } = useAuth();
+  const { user, profile, isAuthenticated, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -83,10 +83,9 @@ export default function Profile() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Navigation is handled in the signOut function in AuthContext
     } catch (error) {
       console.error("Error signing out:", error);
-    } finally {
-      navigate("/");
     }
   };
 
@@ -167,6 +166,37 @@ export default function Profile() {
     { icon: HelpCircle, label: "Help & Support", path: "/help" },
   ];
 
+  // Add admin link for admin users
+  if (isAdmin) {
+    menuItems.unshift({
+      icon: Settings,
+      label: "Admin Dashboard",
+      path: "/admin",
+    });
+  }
+  
+  // Debug: Log admin status
+  console.log('🔐 Profile Page: Admin status', { 
+    isAdmin, 
+    profile,
+    profileRole: profile?.role,
+    isSuperAdmin: profile?.role === 'super_admin',
+    profileExists: !!profile,
+    userExists: !!user
+  });
+  
+  // Add visual indicator for debugging
+  if (isAdmin) {
+    console.log('%c 🔐 ADMIN ACCESS GRANTED - Profile Page', 'background: #222; color: #bada55; font-size: 16px; padding: 5px;');
+  }
+  
+  // Additional debugging
+  useEffect(() => {
+    if (isAdmin) {
+      console.log('🎉 Profile Page: Admin access confirmed in useEffect');
+    }
+  }, [isAdmin]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <DesktopNavigation />
@@ -235,16 +265,6 @@ export default function Profile() {
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
                       <span>{profile.phone}</span>
-                    </div>
-                  )}
-                  {(profile?.city || profile?.state) && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>
-                        {[profile?.city, profile?.state]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
                     </div>
                   )}
                 </div>

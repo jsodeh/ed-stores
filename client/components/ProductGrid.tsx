@@ -15,6 +15,13 @@ export function ProductGrid() {
 
   // Show all products on homepage when no category is selected, otherwise limit to 8
   const products = selectedCategory ? filteredProducts.slice(0, 8) : filteredProducts;
+  
+  console.log('🛍️ ProductGrid: Rendering with state', { 
+    loading, 
+    productsCount: products.length, 
+    filteredProductsCount: filteredProducts.length,
+    selectedCategory
+  });
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -36,6 +43,7 @@ export function ProductGrid() {
   };
 
   if (loading) {
+    console.log('⏳ ProductGrid: Showing loading state');
     return (
       <div className="mx-4 mb-20 text-center py-8">
         <div className="flex justify-center items-center space-x-2">
@@ -47,6 +55,7 @@ export function ProductGrid() {
   }
 
   if (products.length === 0) {
+    console.log('📭 ProductGrid: Showing no products message');
     return (
       <div className="mx-4 mb-20 text-center py-8">
         <p className="text-gray-500">No products found</p>
@@ -57,6 +66,7 @@ export function ProductGrid() {
     );
   }
 
+  console.log('✅ ProductGrid: Showing products', products.length);
   return (
     <>
       <div className="mx-4 mb-20">

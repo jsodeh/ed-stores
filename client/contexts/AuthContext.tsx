@@ -27,51 +27,93 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
+      console.log('🔄 AuthContext: Getting initial session');
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔄 AuthContext: Initial session result:', session ? 'Session exists' : 'No session');
+      console.log('🔄 AuthContext: Session details:', session);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        console.log('👤 AuthContext: Loading profile for user:', session.user.id);
         await loadUserProfile(session.user.id);
+      } else {
+        console.log('👤 AuthContext: No user in session, skipping profile load');
       }
       
+      // Add a small delay to ensure profile is loaded
+      console.log('🏁 AuthContext: Waiting a bit for profile to load...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('🏁 AuthContext: Setting loading to false');
       setLoading(false);
+      console.log('✅ AuthContext: Initial session loading complete');
     };
 
+    console.log('🔄 AuthContext: useEffect triggered');
     getInitialSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 AuthContext: Auth state change event:', event, session ? 'Session exists' : 'No session');
+        console.log('🔄 AuthContext: Session details:', session);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          console.log('👤 AuthContext: User signed in, loading profile');
+          console.log('👤 AuthContext: User signed in, loading profile for user:', session.user.id);
           await loadUserProfile(session.user.id);
         } else {
           console.log('🚪 AuthContext: User signed out, clearing profile');
           setProfile(null);
         }
         
+        // Add a small delay to ensure profile is loaded
+        console.log('🏁 AuthContext: Waiting a bit for profile to load after auth change...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Only set loading to false after processing the auth state change
+        // This ensures that dependent contexts (like StoreContext) know the auth state is stable
+        console.log('🏁 AuthContext: Setting loading to false after auth state change');
         setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🧹 AuthContext: Unsubscribing from auth state changes');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadUserProfile = async (userId: string) => {
     try {
+      console.log('👤 AuthContext: Loading profile for user:', userId);
       const { data, error } = await profiles.getProfile(userId);
+      console.log('👤 AuthContext: Profile data received:', { data, error });
       if (error) {
-        console.error('Error loading profile:', error);
+        console.error('❌ AuthContext: Error loading profile:', error);
+        // Try to get profile with service role key as fallback
+        console.log('🔄 AuthContext: Trying fallback profile fetch...');
+        try {
+          const fallbackResult = await fetch(`http://localhost:8085/api/profile/${userId}`);
+          if (fallbackResult.ok) {
+            const fallbackData = await fallbackResult.json();
+            console.log('✅ AuthContext: Fallback profile loaded:', fallbackData);
+            setProfile(fallbackData);
+            return;
+          } else {
+            console.error('❌ AuthContext: Fallback profile fetch failed:', fallbackResult.status);
+          }
+        } catch (fetchError) {
+          console.error('❌ AuthContext: Fallback profile fetch error:', fetchError);
+        }
         return;
       }
+      console.log('✅ AuthContext: Profile loaded for user:', userId, data);
       setProfile(data);
+      // Log the role directly after setting it
+      console.log('📋 AuthContext: Profile role after setting:', data?.role);
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('❌ AuthContext: Error loading profile:', error);
     }
   };
 
@@ -155,7 +197,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAuthenticated = !!user;
+  // More robust isAdmin calculation with explicit null checking
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  
+  // Debug logging
+  console.log('🔐 AuthContext: isAdmin calculation', {
+    profileRole: profile?.role,
+    profileId: profile?.id,
+    isAdmin,
+    isSuperAdmin: profile?.role === 'super_admin',
+    profileExists: !!profile,
+    userExists: !!user,
+    // Add more detailed debugging
+    profileData: profile,
+    userObject: user,
+    // Add timestamp for debugging
+    timestamp: new Date().toISOString()
+  });
+  
+  // Add a force refresh mechanism for debugging
+  const forceRefreshProfile = async () => {
+    if (user?.id) {
+      console.log('🔄 AuthContext: Force refreshing profile for user:', user.id);
+      await loadUserProfile(user.id);
+    }
+  };
+  
+  // Make forceRefreshProfile available globally for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).forceRefreshProfile = forceRefreshProfile;
+    }
+  }, [user]);
+  
+  // Track isAdmin changes
+  useEffect(() => {
+    console.log('🔄 AuthContext: isAdmin changed to:', isAdmin);
+    // Force a re-render if isAdmin is true but components aren't updating
+    if (isAdmin) {
+      console.log('🎉 AuthContext: Admin access confirmed - forcing update');
+    }
+  }, [isAdmin]);
+  
+  // Debug profile changes
+  useEffect(() => {
+    console.log('🔄 AuthContext: Profile state changed:', profile);
+  }, [profile]);
+  
+  // Debug user changes
+  useEffect(() => {
+    console.log('🔄 AuthContext: User state changed:', user);
+  }, [user]);
 
   const value = {
     user,

@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleGetProfile } from "./routes/profile";
 
 export function createServer() {
   const app = express();
@@ -18,6 +19,9 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+  
+  // Profile debugging route
+  app.get("/api/profile/:userId", handleGetProfile);
 
   return app;
 }

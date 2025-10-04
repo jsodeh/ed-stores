@@ -12,7 +12,7 @@ import { Product, Category, CartItem } from "@shared/database.types";
 import { useToast } from "@/hooks/use-toast";
 
 interface CartItemWithProduct extends CartItem {
-  products: Product;
+  products: Product | null;
 }
 
 interface GuestCartItem {
@@ -65,7 +65,7 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated, profile } = useAuth();
+  const { user, isAuthenticated, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   // State
@@ -84,55 +84,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Load initial data
+  // Simple data loading - load products and categories
   useEffect(() => {
-    const loadData = async () => {
+    console.log('🔄 StoreContext: Data loading useEffect triggered');
+    
+    const loadInitialData = async () => {
       console.log('🚀 StoreContext: Loading initial data');
       setLoading(true);
       
       try {
-        // Load products and categories in parallel
-        const [productsResult, categoriesResult] = await Promise.all([
-          products.getAll(),
-          categories.getAll()
-        ]);
+        // Load products
+        console.log('🔍 StoreContext: Loading products');
+        const productsResult = await products.getAll();
+        console.log('📦 StoreContext: Products loaded:', productsResult?.data?.length || 0);
         
-        // Set products data
         if (productsResult.error) {
           console.error('❌ StoreContext: Error loading products:', productsResult.error);
           setProductsData([]);
         } else {
-          console.log('✅ StoreContext: Loaded products:', productsResult.data?.length || 0);
           setProductsData(productsResult.data || []);
         }
         
-        // Set categories data
+        // Load categories
+        console.log('🔍 StoreContext: Loading categories');
+        const categoriesResult = await categories.getAll();
+        console.log('📦 StoreContext: Categories loaded:', categoriesResult?.data?.length || 0);
+        
         if (categoriesResult.error) {
           console.error('❌ StoreContext: Error loading categories:', categoriesResult.error);
           setCategoriesData([]);
         } else {
-          console.log('✅ StoreContext: Loaded categories:', categoriesResult.data?.length || 0);
           setCategoriesData(categoriesResult.data || []);
         }
         
-        console.log('✅ StoreContext: Initial data loaded successfully');
+        console.log('✅ StoreContext: All initial data loaded');
       } catch (error) {
-        console.error('❌ StoreContext: Error loading initial data:', error);
+        console.error('❌ StoreContext: Error in loadInitialData:', error);
         setProductsData([]);
         setCategoriesData([]);
       } finally {
+        console.log('🏁 StoreContext: Setting loading to false');
         setLoading(false);
       }
     };
     
-    loadData();
+    loadInitialData();
   }, []);
 
   // Reload data when authentication state changes
   useEffect(() => {
+    console.log('🔄 StoreContext: Authentication state changed', { isAuthenticated, userId: user?.id });
+    
     // When authentication state changes, refresh user-specific data
     if (isAuthenticated && user) {
-      console.log('🔄 StoreContext: Authentication state changed, refreshing user data');
+      console.log('🔄 StoreContext: User authenticated, refreshing user data');
       refreshCart();
       refreshFavorites();
     } else if (!isAuthenticated) {
@@ -174,8 +179,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       hasConnectionError
     });
   }, [productsData, categoriesData, loading, hasConnectionError]);
-
-
 
   // Transfer guest cart to user cart when user logs in
   useEffect(() => {
@@ -243,12 +246,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [user, isAuthenticated]);
 
-
-
   const refreshProducts = async () => {
     try {
       console.log('🔍 StoreContext: Refreshing products');
-      setHasConnectionError(false);
+      // Don't set hasConnectionError to false here as it might hide persistent issues
       const { data, error } = await products.getAll();
       console.log('📦 StoreContext: Products query response:', { data, error, count: data?.length });
       
@@ -271,6 +272,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       
       console.log('✅ StoreContext: Setting products data:', data?.length || 0, 'products');
       setProductsData(data || []);
+      // Reset connection error state when successful
+      setHasConnectionError(false);
     } catch (error) {
       console.error("❌ StoreContext: Exception in refreshProducts:", error);
       setHasConnectionError(true);
@@ -317,43 +320,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         description: "Failed to load categories. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  const loadInitialData = async () => {
-    console.log('🚀 StoreContext: Loading initial data');
-    setLoading(true);
-    
-    try {
-      // Load products and categories in parallel
-      const [productsResult, categoriesResult] = await Promise.all([
-        products.getAll(),
-        categories.getAll()
-      ]);
-      
-      // Set products data
-      if (productsResult.error) {
-        console.error('Error loading products:', productsResult.error);
-        setProductsData([]);
-      } else {
-        setProductsData(productsResult.data || []);
-      }
-      
-      // Set categories data
-      if (categoriesResult.error) {
-        console.error('Error loading categories:', categoriesResult.error);
-        setCategoriesData([]);
-      } else {
-        setCategoriesData(categoriesResult.data || []);
-      }
-      
-      console.log('✅ StoreContext: Initial data loaded');
-    } catch (error) {
-      console.error('Error loading initial data:', error);
-      setProductsData([]);
-      setCategoriesData([]);
-    } finally {
-      setLoading(false);
     }
   };
 
