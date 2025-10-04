@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import {
   supabase,
   products,
@@ -92,16 +86,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Load initial data
   useEffect(() => {
+    // Load data when component mounts
     loadInitialData();
   }, []);
 
   // Reload data when authentication state changes
   useEffect(() => {
-    if (isAuthenticated) {
-      console.log('🔄 StoreContext: User authenticated, reloading data');
-      loadInitialData();
+    // When authentication state changes, refresh user-specific data
+    if (isAuthenticated && user) {
+      console.log('🔄 StoreContext: Authentication state changed, refreshing user data');
+      refreshCart();
+      refreshFavorites();
+    } else if (!isAuthenticated) {
+      // Clear user-specific data when user logs out
+      console.log('🔄 StoreContext: User logged out, clearing user data');
+      setCartItems([]);
+      setFavoriteProducts([]);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   // Load guest cart from localStorage on initial load
   useEffect(() => {
@@ -135,17 +137,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, [productsData, categoriesData, loading, hasConnectionError]);
 
-  // Load user-specific data when authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      console.log('🔄 StoreContext: Loading user-specific data for authenticated user');
-      refreshCart();
-      refreshFavorites();
-    } else {
-      setCartItems([]);
-      setFavoriteProducts([]);
-    }
-  }, [isAuthenticated, user]);
+
 
   // Transfer guest cart to user cart when user logs in
   useEffect(() => {
