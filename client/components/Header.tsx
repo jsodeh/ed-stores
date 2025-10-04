@@ -15,18 +15,11 @@ export function Header() {
     <>
       <header className="flex items-center justify-between p-4 bg-white">
         <div className="flex items-center">
-          <img 
-            src="/logo.png" 
-            alt="ED Superstore" 
-            className="h-8 w-auto"
-          />
+          <img src="/logo.png" alt="ED Superstore" className="h-8 w-auto" />
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            className="relative"
-            onClick={() => navigate("/cart")}
-          >
+          <button className="relative" onClick={() => navigate("/cart")}>
             <ShoppingCart className="h-6 w-6 text-gray-600" />
             {cartItemCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -51,10 +44,10 @@ export function Header() {
           )}
         </div>
       </header>
-      
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
       />
     </>
   );

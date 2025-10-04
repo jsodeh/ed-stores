@@ -79,8 +79,7 @@ export function Categories() {
                   </span>
                 </button>
               );
-            })
-        }
+            })}
       </div>
     </div>
   );
