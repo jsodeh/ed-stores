@@ -16,10 +16,13 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Profile from "./pages/Profile";
+import Orders from "./pages/Orders";
+import OrderDetails from "./pages/OrderDetails";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminUsers from "./pages/admin/Users";
 import AdminOrders from "./pages/admin/Orders";
+import AdminOrderDetails from "./pages/admin/OrderDetails";
 import AdminCategories from "./pages/admin/Categories";
 import AdminInventory from "./pages/admin/Inventory";
 import AdminMessages from "./pages/admin/Messages";
@@ -36,12 +39,7 @@ const App = () => (
         <StoreProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/test" element={<Test />} />
@@ -51,6 +49,8 @@ const App = () => (
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/order-confirmation" element={<OrderConfirmation />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/order/:orderId" element={<OrderDetails />} />
 
               {/* Admin Routes - Protected with AuthGuard */}
               <Route 
@@ -82,6 +82,14 @@ const App = () => (
                 element={
                   <AuthGuard requireAuth requireAdmin>
                     <AdminOrders />
+                  </AuthGuard>
+                } 
+              />
+              <Route 
+                path="/admin/order/:orderId" 
+                element={
+                  <AuthGuard requireAuth requireAdmin>
+                    <AdminOrderDetails />
                   </AuthGuard>
                 } 
               />

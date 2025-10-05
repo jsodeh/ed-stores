@@ -681,6 +681,44 @@ export const orders = {
     return { data, error };
   },
 
+  // Get order details by ID
+  getOrderById: async (orderId: string, userId: string) => {
+    const { data, error } = await supabase
+      .from("order_details")
+      .select(`
+        *,
+        order_items:order_items(
+          *,
+          products:product_id (
+            id,
+            name,
+            image_url,
+            price
+          )
+        )
+      `)
+      .eq("id", orderId)
+      .eq("user_id", userId)
+      .single();
+    return { data, error };
+  },
+
+  // Get order items
+  getOrderItems: async (orderId: string) => {
+    const { data, error } = await supabase
+      .from("order_items")
+      .select(`
+        *,
+        products:product_id (
+          id,
+          name,
+          image_url
+        )
+      `)
+      .eq("order_id", orderId);
+    return { data, error };
+  },
+
   // Create order from cart
   createFromCart: async (
     userId: string,
@@ -692,6 +730,17 @@ export const orders = {
       p_delivery_address_id: deliveryAddressId,
       p_delivery_notes: deliveryNotes,
     });
+    return { data, error };
+  },
+  
+  // Update order status (for admin)
+  updateOrderStatus: async (orderId: string, status: string) => {
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", orderId)
+      .select()
+      .single();
     return { data, error };
   },
 };
