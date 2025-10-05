@@ -19,6 +19,7 @@ export default function OrderDetails() {
   const navigate = useNavigate();
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
+  const [orderItems, setOrderItems] = useState<any[]>([]); // Use any[] for now to avoid type issues
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,20 +44,31 @@ export default function OrderDetails() {
     setLoading(true);
     setError(null);
     try {
-      // Use the new getOrderById function
-      const { data: orderData, error: orderError } = await orders.getOrderById(orderId, user.id);
+      // First, get the order details
+      const { data: orderData, error: orderError } = await orders.getUserOrders(user.id);
       if (orderError) {
         console.error("Error loading order:", orderError);
         setError("Failed to load order details. Please try again later.");
         return;
       }
 
-      if (!orderData) {
+      // Find the specific order
+      const specificOrder = orderData?.find(order => order.id === orderId);
+      if (!specificOrder) {
         setError("Order not found.");
         return;
       }
 
-      setOrder(orderData);
+      setOrder(specificOrder);
+
+      // Then, get the order items separately
+      const { data: itemsData, error: itemsError } = await orders.getOrderItems(orderId);
+      if (itemsError) {
+        console.error("Error loading order items:", itemsError);
+        // Don't return here, just show empty items
+      } else {
+        setOrderItems(itemsData || []);
+      }
     } catch (error) {
       console.error("Error loading order details:", error);
       setError("Failed to load order details. Please try again later.");
@@ -253,9 +265,9 @@ export default function OrderDetails() {
                 <CardTitle>Items in this Order</CardTitle>
               </CardHeader>
               <CardContent>
-                {order.order_items && order.order_items.length > 0 ? (
+                {orderItems && orderItems.length > 0 ? (
                   <div className="space-y-4">
-                    {order.order_items.map((item) => (
+                    {orderItems.map((item: any) => (
                       <div key={item.id} className="flex items-center gap-4">
                         {item.products?.image_url ? (
                           <img

@@ -15,7 +15,25 @@ export default defineConfig({
   build: {
     outDir: "dist/spa",
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'spa-fallback',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          // If the request is not for a file (no dot in the path) and not an API call or Vite internal route
+          if (!req.url.includes('.') && 
+              !req.url.startsWith('/@') && 
+              !req.url.startsWith('/api') &&
+              req.url !== '/favicon.ico') {
+            // Rewrite the request to serve index.html
+            req.url = '/';
+          }
+          next();
+        });
+      }
+    }
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./client"),
@@ -23,27 +41,3 @@ export default defineConfig({
     },
   },
 });
-
-function expressPlugin(): Plugin {
-  return {
-    name: "express-plugin",
-    apply: "serve", // Only apply during development (serve mode)
-    configureServer(server) {
-      const app = createServer();
-
-      // Add Express app as middleware to Vite dev server
-      server.middlewares.use(app);
-      
-      // Handle SPA fallback for client-side routing
-      server.middlewares.use((req, res, next) => {
-        // Skip API routes and static assets
-        if (req.url.startsWith('/api/') || req.url.startsWith('/@')) {
-          return next();
-        }
-        
-        // Let Vite handle the request normally
-        next();
-      });
-    },
-  };
-}
