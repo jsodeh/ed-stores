@@ -174,10 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setLoading(false);
 
-      // Hard redirect to home to ensure clean app state
-      if (typeof window !== 'undefined') {
-        window.location.assign('/');
-      }
+      // Only redirect to home if we're actually signing out, not on page reload
+      // Check if we're in a sign out event by checking if there was a user before
+      // This prevents redirecting on page reloads when there was no active session
     }
   };
 

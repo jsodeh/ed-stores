@@ -25,7 +25,8 @@ export default function OrderDetails() {
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate("/"); // Redirect to home if not authenticated
+      // Instead of redirecting to home, we should show a message or redirect to sign-in
+      // navigate("/"); // Removed redirect to home
     }
   }, [isAuthenticated, navigate]);
 

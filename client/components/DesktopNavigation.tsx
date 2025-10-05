@@ -29,10 +29,8 @@ export function DesktopNavigation() {
       console.log('✅ DesktopNavigation: Sign out completed');
     } catch (error) {
       console.error("❌ DesktopNavigation: Error signing out:", error);
-    } finally {
-      // Always return to homepage
-      navigate("/");
     }
+    // Don't automatically navigate to homepage - let the user stay on the current page
   };
 
   return (

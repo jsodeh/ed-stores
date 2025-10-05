@@ -67,12 +67,11 @@ export function Header() {
       console.log('🚪 Header: Starting sign out process');
       await signOut();
       console.log('✅ Header: Sign out completed, navigating to home');
-      // Additional navigation to ensure user goes to home page
+      // Only navigate to home after successful sign out
       navigate("/", { replace: true });
     } catch (error) {
       console.error("❌ Header: Error signing out:", error);
-      // Even if there's an error, still navigate to home
-      navigate("/", { replace: true });
+      // Don't navigate on error - let the user stay on the current page
     }
   };
 

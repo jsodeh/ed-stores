@@ -18,8 +18,8 @@ export default function OrderConfirmation() {
   };
 
   if (!orderData) {
-    // If no order data, redirect to home
-    navigate("/");
+    // If no order data, redirect to orders page instead of home
+    navigate("/orders");
     return null;
   }
 
