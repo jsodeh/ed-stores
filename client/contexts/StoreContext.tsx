@@ -229,7 +229,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           },
           (payload) => {
             console.log('🛒 Cart change detected:', payload);
-            refreshCart();
+            // Add a small delay to ensure the database operation is complete
+            setTimeout(() => {
+              refreshCart();
+            }, 100);
           },
         )
         .subscribe((status) => {
@@ -342,6 +345,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         throw error;
       }
       console.log('✅ StoreContext: Cart refreshed with', data?.length || 0, 'items');
+      console.log('📦 Cart data:', data);
       setCartItems((data || []) as CartItemWithProduct[]);
     } catch (error) {
       console.error("❌ StoreContext: Exception in refreshCart:", error);
@@ -470,7 +474,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         "cart"
       );
       
-      // Cart will be refreshed by real-time subscription
+      // Add a small delay to ensure the database operation is complete
+      // before refreshing the cart
+      setTimeout(() => {
+        refreshCart();
+      }, 100);
+      
       console.log('✅ StoreContext: Item added to cart successfully');
     } catch (error) {
       console.error("❌ StoreContext: Exception in addToCartAuthenticated:", error);
@@ -547,6 +556,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const { error } = await cart.updateQuantity(user.id, productId, quantity);
       if (error) throw error;
+      
+      // Add a small delay to ensure the database operation is complete
+      // before refreshing the cart
+      setTimeout(() => {
+        refreshCart();
+      }, 100);
     } catch (error) {
       console.error("Error updating cart quantity:", error);
       toast({
@@ -596,6 +611,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const { error } = await cart.removeItem(user.id, productId);
       if (error) throw error;
+      
+      // Add a small delay to ensure the database operation is complete
+      // before refreshing the cart
+      setTimeout(() => {
+        refreshCart();
+      }, 100);
       
       toast({
         title: "Removed from cart",
@@ -746,7 +767,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Calculate cart total based on authentication status
   const cartTotal = isAuthenticated 
     ? cartItems.reduce((total, item) => {
-        return total + (item.products?.price || 0) * item.quantity;
+        const itemTotal = (item.products?.price || 0) * item.quantity;
+        console.log('💰 Cart item calculation:', { 
+          productId: item.product_id, 
+          price: item.products?.price, 
+          quantity: item.quantity, 
+          itemTotal 
+        });
+        return total + itemTotal;
       }, 0)
     : guestCart.reduce((total, item) => {
         return total + (item.product?.price || 0) * item.quantity;
@@ -754,7 +782,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Calculate cart item count based on authentication status
   const cartItemCount = isAuthenticated
-    ? cartItems.reduce((count, item) => count + item.quantity, 0)
+    ? cartItems.reduce((count, item) => {
+        const itemCount = item.quantity;
+        console.log('🧺 Cart item count:', { 
+          productId: item.product_id, 
+          quantity: item.quantity, 
+          itemCount 
+        });
+        return count + itemCount;
+      }, 0)
     : guestCart.reduce((count, item) => count + item.quantity, 0);
 
   const deliveryFee = cartTotal >= 50000 ? 0 : 2500;

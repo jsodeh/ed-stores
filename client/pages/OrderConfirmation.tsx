@@ -181,8 +181,8 @@ export default function OrderConfirmation() {
                 <h3 className="font-semibold text-gray-900 mb-2">What's Next?</h3>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• Order confirmation sent to your email</li>
-                  <li>• We'll process your order within 24 hours</li>
-                  <li>• Delivery within 3-5 business days</li>
+                  <li>• We'll start processing your order in 15 minutes</li>
+                  <li>• Delivery within an hour</li>
                   <li>• Track your order in your profile</li>
                 </ul>
               </CardContent>

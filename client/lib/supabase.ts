@@ -447,6 +447,8 @@ export const cart = {
         })).filter(item => item.products); // Filter out items without products
         
         console.log('✅ Cart fetched successfully:', transformedData.length, 'items');
+        console.log('📦 Raw cart data:', data);
+        console.log('🔄 Transformed cart data:', transformedData);
         return { data: transformedData, error: null };
       }
       
@@ -488,6 +490,7 @@ export const cart = {
       }
       
       console.log('✅ Item added to cart successfully');
+      console.log('📦 Added cart item data:', data);
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart addItem error:", err);
@@ -527,6 +530,7 @@ export const cart = {
       }
       
       console.log('✅ Cart item quantity updated successfully');
+      console.log('📦 Updated cart item data:', data);
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart updateQuantity error:", err);
@@ -557,6 +561,7 @@ export const cart = {
       }
       
       console.log('✅ Item removed from cart successfully');
+      console.log('📦 Removed cart item data:', data);
       return { data, error: null };
     } catch (err) {
       console.error("❌ Cart removeItem error:", err);
@@ -734,10 +739,10 @@ export const orders = {
   },
   
   // Update order status (for admin)
-  updateOrderStatus: async (orderId: string, status: string) => {
+  updateOrderStatus: async (orderId: string, status: Database["public"]["Enums"]["order_status"]) => {
     const { data, error } = await supabase
       .from("orders")
-      .update({ status })
+      .update({ status: status as any })
       .eq("id", orderId)
       .select()
       .single();

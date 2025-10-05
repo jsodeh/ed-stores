@@ -8,7 +8,7 @@ import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Cart() {
   const { cartItems, updateCartQuantity, removeFromCart, cartTotal, clearCart } = useStore();
@@ -26,6 +26,21 @@ export default function Cart() {
 
   const deliveryFee = cartTotal > 50000 ? 0 : 2500; // Free delivery over ₦50,000
   const finalTotal = cartTotal + deliveryFee;
+
+  // Log cart totals for debugging
+  useEffect(() => {
+    console.log('💰 Cart totals updated:', { 
+      cartTotal, 
+      deliveryFee, 
+      finalTotal,
+      itemCount: cartItems.length
+    });
+  }, [cartTotal, deliveryFee, finalTotal, cartItems.length]);
+
+  // Log cart items for debugging
+  useEffect(() => {
+    console.log('🛒 Cart items updated:', cartItems);
+  }, [cartItems]);
 
   if (cartItems.length === 0) {
     return (
@@ -83,7 +98,7 @@ export default function Cart() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
             {cartItems.map((item) => (
-              <div key={item.product_id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex gap-4">
                   <img
                     src={item.products?.image_url || '/placeholder.svg'}
@@ -102,7 +117,12 @@ export default function Cart() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeFromCart(item.products?.id!)}
+                        onClick={() => {
+                          console.log('🗑️ Removing item from cart:', { 
+                            productId: item.product_id 
+                          });
+                          removeFromCart(item.product_id!);
+                        }}
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -119,7 +139,14 @@ export default function Cart() {
                           variant="outline"
                           size="icon"
                           className="w-8 h-8"
-                          onClick={() => updateCartQuantity(item.products?.id!, item.quantity - 1)}
+                          onClick={() => {
+                            console.log('🛒 Updating cart quantity - decrement:', { 
+                              productId: item.product_id, 
+                              currentQuantity: item.quantity, 
+                              newQuantity: item.quantity - 1 
+                            });
+                            updateCartQuantity(item.product_id!, item.quantity - 1);
+                          }}
                           disabled={item.quantity <= 1}
                         >
                           <Minus className="h-4 w-4" />
@@ -131,7 +158,14 @@ export default function Cart() {
                           variant="outline"
                           size="icon"
                           className="w-8 h-8"
-                          onClick={() => updateCartQuantity(item.products?.id!, item.quantity + 1)}
+                          onClick={() => {
+                            console.log('🛒 Updating cart quantity - increment:', { 
+                              productId: item.product_id, 
+                              currentQuantity: item.quantity, 
+                              newQuantity: item.quantity + 1 
+                            });
+                            updateCartQuantity(item.product_id!, item.quantity + 1);
+                          }}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
