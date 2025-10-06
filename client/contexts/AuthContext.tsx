@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('👤 AuthContext: No user in session, skipping profile load');
       }
       
-      // Remove the artificial delay - let the profile loading handle timing
+      // Ensure loading is set to false
       console.log('🏁 AuthContext: Setting loading to false');
       setLoading(false);
       console.log('✅ AuthContext: Initial session loading complete');
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
         
-        // Remove the artificial delay - let the profile loading handle timing
+        // Ensure loading is set to false
         console.log('🏁 AuthContext: Setting loading to false after auth state change');
         setLoading(false);
       }
@@ -107,6 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('👤 AuthContext: Profile data received:', { data, error });
       if (error) {
         console.error('❌ AuthContext: Error loading profile:', error);
+        // Ensure loading is set to false even on error
+        setLoading(false);
         return;
       }
       console.log('✅ AuthContext: Profile loaded for user:', userId, data);
@@ -128,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('📋 AuthContext: Profile role after setting:', data?.role);
     } catch (error) {
       console.error('❌ AuthContext: Error loading profile:', error);
+      // Ensure loading is set to false even on error
+      setLoading(false);
     }
   };
 

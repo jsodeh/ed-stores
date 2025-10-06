@@ -93,10 +93,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       
       try {
-        // Load products
-        console.log('🔍 StoreContext: Loading products');
-        const productsResult = await products.getAll();
+        // Load products and categories in parallel
+        console.log('🔍 StoreContext: Loading products and categories');
+        const [productsResult, categoriesResult] = await Promise.all([
+          products.getAll(),
+          categories.getAll()
+        ]);
+        
         console.log('📦 StoreContext: Products loaded:', productsResult?.data?.length || 0);
+        console.log('📦 StoreContext: Categories loaded:', categoriesResult?.data?.length || 0);
         
         if (productsResult.error) {
           console.error('❌ StoreContext: Error loading products:', productsResult.error);
@@ -104,11 +109,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         } else {
           setProductsData(productsResult.data || []);
         }
-        
-        // Load categories
-        console.log('🔍 StoreContext: Loading categories');
-        const categoriesResult = await categories.getAll();
-        console.log('📦 StoreContext: Categories loaded:', categoriesResult?.data?.length || 0);
         
         if (categoriesResult.error) {
           console.error('❌ StoreContext: Error loading categories:', categoriesResult.error);
@@ -338,7 +338,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             variant: "destructive",
           });
         }
-        throw error;
+        // Don't throw error to prevent infinite loading loops
+        setCartItems([]);
+        return;
       }
       console.log('✅ StoreContext: Cart refreshed with', data?.length || 0, 'items');
       console.log('📦 Cart data:', data);
@@ -350,6 +352,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         description: "Failed to load your cart. Please try again.",
         variant: "destructive",
       });
+      // Set empty array on error to avoid infinite loading
+      setCartItems([]);
     } finally {
       setCartLoading(false);
     }
@@ -360,12 +364,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data, error } = await favorites.getFavorites(user.id);
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading favorites:", error);
+        // Set empty array on error to avoid issues
+        setFavoriteProducts([]);
+        return;
+      }
       const favoriteProducts =
         data?.map((fav) => fav.products).filter(Boolean) || [];
       setFavoriteProducts(favoriteProducts as Product[]);
     } catch (error) {
       console.error("Error loading favorites:", error);
+      // Set empty array on error to avoid issues
+      setFavoriteProducts([]);
     }
   };
 
