@@ -151,7 +151,7 @@ export const profiles = {
   // Get user profile
   getProfile: async (userId: string) => {
     console.log('👤 profiles.getProfile: Fetching profile for user:', userId);
-    const { data, error } = await publicSupabase
+    const { data, error } = await supabase
       .from("user_profiles")
       .select("*")
       .eq("id", userId)
@@ -163,7 +163,7 @@ export const profiles = {
   // Get user profile by email
   getProfileByEmail: async (email: string) => {
     console.log('📧 profiles.getProfileByEmail: Fetching profile for email:', email);
-    const { data, error } = await publicSupabase
+    const { data, error } = await supabase
       .from("user_profiles")
       .select("*")
       .eq("email", email)
@@ -186,7 +186,7 @@ export const profiles = {
   // Check if user is admin
   isAdmin: async (userId: string) => {
     console.log('🔐 profiles.isAdmin: Checking admin status for user:', userId);
-    const { data } = await publicSupabase
+    const { data } = await supabase
       .from("user_profiles")
       .select("role")
       .eq("id", userId)

@@ -110,6 +110,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       console.log('✅ AuthContext: Profile loaded for user:', userId, data);
+      
+      // Additional debugging for role verification
+      if (data?.role) {
+        console.log('📋 AuthContext: Profile role verification:', {
+          role: data.role,
+          roleType: typeof data.role,
+          isAdmin: data.role === 'admin' || data.role === 'super_admin',
+          isSuperAdmin: data.role === 'super_admin'
+        });
+      } else {
+        console.warn('⚠️ AuthContext: Profile loaded but role is missing or null:', data);
+      }
+      
       setProfile(data);
       // Log the role directly after setting it
       console.log('📋 AuthContext: Profile role after setting:', data?.role);
@@ -200,20 +213,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // More robust isAdmin calculation with explicit null checking
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   
-  // Debug logging
-  console.log('🔐 AuthContext: isAdmin calculation', {
+  // Additional debugging for role checking
+  console.log('🔐 AuthContext: Role checking details', {
     profileRole: profile?.role,
-    profileId: profile?.id,
-    isAdmin,
-    isSuperAdmin: profile?.role === 'super_admin',
-    profileExists: !!profile,
-    userExists: !!user,
-    // Add more detailed debugging
-    profileData: profile,
-    userObject: user,
-    // Add timestamp for debugging
-    timestamp: new Date().toISOString()
+    profileRoleType: typeof profile?.role,
+    profileRoleIsNull: profile?.role === null,
+    profileRoleIsUndefined: profile?.role === undefined,
+    isAdminCheck1: profile?.role === 'admin',
+    isAdminCheck2: profile?.role === 'super_admin',
+    finalIsAdmin: isAdmin
   });
+  
+  // Debug logging - moved to useEffect to reduce console spam
+  useEffect(() => {
+    console.log('🔐 AuthContext: isAdmin calculation', {
+      profileRole: profile?.role,
+      profileId: profile?.id,
+      isAdmin,
+      isSuperAdmin: profile?.role === 'super_admin',
+      profileExists: !!profile,
+      userExists: !!user,
+      // Add more detailed debugging
+      profileData: profile,
+      userObject: user,
+      // Add timestamp for debugging
+      timestamp: new Date().toISOString()
+    });
+  }, [profile, user, isAdmin]);
   
   // Add a force refresh mechanism for debugging
   const forceRefreshProfile = async () => {
