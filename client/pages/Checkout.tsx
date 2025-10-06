@@ -13,7 +13,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { supabase, notifications } from "@/lib/supabase";
+import { supabase, notifications, orders } from "@/lib/supabase";
 import { PaymentVerificationModal } from "@/components/PaymentVerificationModal";
 
 export default function Checkout() {
@@ -32,6 +32,7 @@ export default function Checkout() {
     address: "",
     city: "",
     state: "",
+    postalCode: "",
     deliveryNotes: "",
   });
   
@@ -58,26 +59,46 @@ export default function Checkout() {
     setIsPlacingOrder(true);
     
     try {
-      // Generate order number
-      const orderNumber = `ED-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      // Validate required fields
+      if (!formData.address || !formData.city || !formData.state) {
+        throw new Error("Please fill in all required address fields");
+      }
       
-      // In a real app, you would integrate with a payment provider or create an order in the database
-      // For now, we'll simulate the process
+      // Create address record first
+      const { data: addressData, error: addressError } = await supabase
+        .from("addresses")
+        .insert({
+          user_id: user?.id || null,
+          type: "delivery",
+          street_address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          postal_code: formData.postalCode || null,
+          country: "Nigeria"
+        })
+        .select()
+        .single();
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (addressError) throw addressError;
       
-      // Store order details for verification
-      const details = {
-        orderNumber,
-        paymentMethod,
-        cartTotal,
-        deliveryFee,
-        finalTotal,
-        ...formData
-      };
+      // Create order from cart using the stored procedure
+      const { data: orderData, error: orderError } = await orders.createFromCart(
+        user?.id || "",
+        addressData.id,
+        formData.deliveryNotes || "",
+        paymentMethod
+      );
       
-      setOrderDetails(details);
+      if (orderError) throw orderError;
+      
+      // Get the created order details
+      const { data: orderDetails, error: orderDetailsError } = await supabase
+        .from("order_details")
+        .select("*")
+        .eq("id", orderData)
+        .single();
+      
+      if (orderDetailsError) throw orderDetailsError;
       
       // Clear cart
       clearCart();
@@ -85,23 +106,24 @@ export default function Checkout() {
       // Show verification modal for bank transfer payments
       if (paymentMethod === "transfer") {
         setShowVerificationModal(true);
+        setOrderDetails(orderDetails);
       } else {
         // Navigate to order confirmation page for cash payments
         navigate("/order-confirmation", {
-          state: details
+          state: orderDetails
         });
       }
       
       // Send notification to admins
       await notifications.createAdminNotification(
         "New Order Placed",
-        `User ${profile?.full_name || user?.email || 'Guest'} placed a new order (${orderNumber}) with ${cartItems.length} items. Total: ${formatPrice(finalTotal)}. Payment method: ${paymentMethod}.`,
+        `User ${profile?.full_name || user?.email || 'Guest'} placed a new order (${orderDetails.order_number}) with ${cartItems.length} items. Total: ${formatPrice(orderDetails.total_amount)}. Payment method: ${paymentMethod}.`,
         "order",
-        `/admin/orders?order=${orderNumber}`
+        `/admin/orders?order=${orderDetails.order_number}`
       );
     } catch (error) {
       console.error("Error placing order:", error);
-      alert("Failed to place order. Please try again.");
+      alert(`Failed to place order: ${error.message || "Please try again."}`);
     } finally {
       setIsPlacingOrder(false);
     }
@@ -211,7 +233,7 @@ export default function Checkout() {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
                     <Input
@@ -232,6 +254,16 @@ export default function Checkout() {
                       value={formData.state}
                       onChange={handleInputChange}
                       required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Input
+                      id="postalCode"
+                      name="postalCode"
+                      placeholder="Postal Code"
+                      value={formData.postalCode}
+                      onChange={handleInputChange}
                     />
                   </div>
                 </div>

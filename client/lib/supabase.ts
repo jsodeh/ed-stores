@@ -741,11 +741,13 @@ export const orders = {
     userId: string,
     deliveryAddressId: string,
     deliveryNotes?: string,
+    paymentMethod?: string,
   ) => {
     const { data, error } = await supabase.rpc("create_order_from_cart", {
       p_user_id: userId,
       p_delivery_address_id: deliveryAddressId,
       p_delivery_notes: deliveryNotes,
+      p_payment_method: paymentMethod,
     });
     return { data, error };
   },
