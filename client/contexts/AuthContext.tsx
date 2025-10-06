@@ -29,15 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkUserByEmail = async (email: string) => {
     try {
       console.log('🔍 AuthContext: Checking user by email:', email);
-      
+
       // Check in user_profiles table (public schema)
       const { data: userProfiles, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('email', email);
-        
+
       console.log('🔍 AuthContext: User profiles result:', { userProfiles, profileError });
-      
+
       return {
         userProfiles,
         profileError
@@ -56,17 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔄 AuthContext: Initial session result:', session ? 'Session exists' : 'No session');
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
         console.log('👤 AuthContext: Loading profile for user:', session.user.id);
         await loadUserProfile(session.user.id);
       } else {
         console.log('👤 AuthContext: No user in session, skipping profile load');
+        // Ensure loading is set to false even when no user
+        setLoading(false);
       }
-      
-      // Ensure loading is set to false
-      console.log('🏁 AuthContext: Setting loading to false');
-      setLoading(false);
+
       console.log('✅ AuthContext: Initial session loading complete');
     };
 
@@ -79,18 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('🔄 AuthContext: Auth state change event:', event, session ? 'Session exists' : 'No session');
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
           console.log('👤 AuthContext: User signed in, loading profile for user:', session.user.id);
           await loadUserProfile(session.user.id);
         } else {
           console.log('🚪 AuthContext: User signed out, clearing profile');
           setProfile(null);
+          setLoading(false);
         }
-        
-        // Ensure loading is set to false
-        console.log('🏁 AuthContext: Setting loading to false after auth state change');
-        setLoading(false);
       }
     );
 
@@ -107,12 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('👤 AuthContext: Profile data received:', { data, error });
       if (error) {
         console.error('❌ AuthContext: Error loading profile:', error);
-        // Ensure loading is set to false even on error
-        setLoading(false);
+        setProfile(null);
         return;
       }
       console.log('✅ AuthContext: Profile loaded for user:', userId, data);
-      
+
       // Additional debugging for role verification
       if (data?.role) {
         console.log('📋 AuthContext: Profile role verification:', {
@@ -124,13 +119,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.warn('⚠️ AuthContext: Profile loaded but role is missing or null:', data);
       }
-      
+
       setProfile(data);
       // Log the role directly after setting it
       console.log('📋 AuthContext: Profile role after setting:', data?.role);
     } catch (error) {
       console.error('❌ AuthContext: Error loading profile:', error);
-      // Ensure loading is set to false even on error
+      setProfile(null);
+    } finally {
+      // Always set loading to false after profile loading attempt
       setLoading(false);
     }
   };
@@ -200,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return { error: 'No user logged in' };
-    
+
     try {
       const result = await profiles.updateProfile(user.id, updates);
       if (result.data) {
@@ -214,9 +211,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAuthenticated = !!user;
-  // More robust isAdmin calculation with explicit null checking
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
-  
+  // More robust isAdmin calculation with fallback during loading
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin' ||
+    (loading && isAuthenticated && localStorage.getItem('userIsAdmin') === 'true');
+
+  // Store admin status in localStorage for persistence across reloads
+  useEffect(() => {
+    if (profile?.role && (profile.role === 'admin' || profile.role === 'super_admin')) {
+      localStorage.setItem('userIsAdmin', 'true');
+      localStorage.setItem('userRole', profile.role);
+    } else if (profile && profile.role !== 'admin' && profile.role !== 'super_admin') {
+      localStorage.removeItem('userIsAdmin');
+      localStorage.removeItem('userRole');
+    }
+  }, [profile?.role]);
+
   // Additional debugging for role checking
   console.log('🔐 AuthContext: Role checking details', {
     profileRole: profile?.role,
@@ -225,9 +234,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profileRoleIsUndefined: profile?.role === undefined,
     isAdminCheck1: profile?.role === 'admin',
     isAdminCheck2: profile?.role === 'super_admin',
-    finalIsAdmin: isAdmin
+    finalIsAdmin: isAdmin,
+    storedAdminStatus: localStorage.getItem('userIsAdmin'),
+    storedRole: localStorage.getItem('userRole')
   });
-  
+
   // Debug logging - moved to useEffect to reduce console spam
   useEffect(() => {
     console.log('🔐 AuthContext: isAdmin calculation', {
@@ -244,7 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       timestamp: new Date().toISOString()
     });
   }, [profile, user, isAdmin]);
-  
+
   // Add a force refresh mechanism for debugging
   const forceRefreshProfile = async () => {
     if (user?.id) {
@@ -252,14 +263,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await loadUserProfile(user.id);
     }
   };
-  
+
   // Make forceRefreshProfile available globally for debugging
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as any).forceRefreshProfile = forceRefreshProfile;
     }
   }, [user]);
-  
+
   // Track isAdmin changes
   useEffect(() => {
     console.log('🔄 AuthContext: isAdmin changed to:', isAdmin);
@@ -268,12 +279,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🎉 AuthContext: Admin access confirmed - forcing update');
     }
   }, [isAdmin]);
-  
+
   // Debug profile changes
   useEffect(() => {
     console.log('🔄 AuthContext: Profile state changed:', profile);
   }, [profile]);
-  
+
   // Debug user changes
   useEffect(() => {
     console.log('🔄 AuthContext: User state changed:', user);
@@ -309,12 +320,12 @@ export function useAuth() {
 }
 
 // Auth guard component
-export function AuthGuard({ 
-  children, 
+export function AuthGuard({
+  children,
   fallback = null,
   requireAuth = true,
-  requireAdmin = false 
-}: { 
+  requireAdmin = false
+}: {
   children: ReactNode;
   fallback?: ReactNode;
   requireAuth?: boolean;

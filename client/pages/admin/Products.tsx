@@ -43,6 +43,8 @@ export default function AdminProducts() {
   const loadProducts = async () => {
     setLoading(true);
     try {
+      // Add cache-busting parameter to ensure fresh data
+      const timestamp = Date.now();
       const { data, error } = await supabase
         .from("products")
         .select(`
@@ -65,9 +67,12 @@ export default function AdminProducts() {
         category_slug: product.categories?.slug || null,
         category_color: product.categories?.color || null,
         average_rating: 0,
-        review_count: 0
+        review_count: 0,
+        // Add timestamp to force image refresh
+        image_url: product.image_url ? `${product.image_url}?t=${timestamp}` : product.image_url
       }));
       
+      console.log('📦 Admin Products: Loaded products with fresh data:', transformedData.length);
       setProducts(transformedData);
     } catch (error) {
       console.error("Error loading products:", error);
@@ -117,7 +122,12 @@ export default function AdminProducts() {
   const handleFormSave = async () => {
     setShowForm(false);
     setEditingProduct(null);
+    // Force a fresh reload of products to ensure updated images are shown
     await loadProducts();
+    // Also trigger a small delay to ensure any caching is cleared
+    setTimeout(() => {
+      loadProducts();
+    }, 1000);
   };
 
   const handleFormCancel = () => {
@@ -149,16 +159,29 @@ export default function AdminProducts() {
               className="pl-10"
             />
           </div>
-          <Button
-            onClick={() => {
-              setEditingProduct(null);
-              setShowForm(true);
-            }}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={loadProducts}
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              ) : (
+                "Refresh"
+              )}
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingProduct(null);
+                setShowForm(true);
+              }}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

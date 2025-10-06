@@ -88,7 +88,7 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
       setUploading(true);
-      console.log('Starting image upload...', { 
+      console.log('🖼️ ProductForm: Starting image upload...', { 
         fileName: file.name, 
         fileSize: file.size, 
         fileType: file.type 
@@ -97,45 +97,64 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       
-      console.log('Uploading file to storage...', { fileName });
+      console.log('📤 ProductForm: Uploading file to storage...', { fileName });
       
-      // Add timeout to prevent hanging
-      const uploadPromise = supabase.storage
+      // Upload directly since bucket exists
+      const { data, error } = await supabase.storage
         .from('product-images')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
         });
-      
-      // Timeout after 30 seconds
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
-      );
-      
-      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any;
 
       if (error) {
-        console.error('Supabase storage upload error:', error);
-        alert(`Error uploading image: ${error.message || 'Unknown error'}. Please try again.`);
+        console.error('❌ ProductForm: Supabase storage upload error:', error);
+        
+        if (error.message?.includes('row-level security') || error.message?.includes('permission')) {
+          alert('Storage permissions not configured. Please run the setup-storage-policies.sql script in your Supabase SQL Editor, then try again. You can also enter the image URL manually below.');
+        } else if (error.message?.includes('duplicate')) {
+          // File already exists, try with a different name
+          const newFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-retry.${fileExt}`;
+          console.log('🔄 ProductForm: File exists, retrying with new name:', newFileName);
+          
+          const { data: retryData, error: retryError } = await supabase.storage
+            .from('product-images')
+            .upload(newFileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+            
+          if (retryError) {
+            console.error('❌ ProductForm: Retry upload failed:', retryError);
+            alert(`Error uploading image: ${retryError.message}. You can enter the image URL manually below.`);
+            return null;
+          }
+          
+          // Get public URL for retry
+          const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(newFileName);
+            
+          console.log('✅ ProductForm: Retry upload successful, public URL:', publicUrl);
+          return publicUrl;
+        } else {
+          alert(`Error uploading image: ${error.message || 'Unknown error'}. You can enter the image URL manually below.`);
+        }
         return null;
       }
 
-      console.log('Upload successful, getting public URL...', { data });
+      console.log('✅ ProductForm: Upload successful, getting public URL...', { data });
       
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
         .getPublicUrl(fileName);
 
-      console.log('Public URL retrieved:', { publicUrl });
+      console.log('🔗 ProductForm: Public URL retrieved:', publicUrl);
       return publicUrl;
     } catch (error: any) {
-      console.error('Error uploading image:', error);
-      if (error.message?.includes('timeout')) {
-        alert('Upload timed out. Please check your internet connection and try again.');
-      } else {
-        alert(`Error uploading image: ${error.message || error || 'Unknown error'}. Please try again.`);
-      }
+      console.error('❌ ProductForm: Unexpected error uploading image:', error);
+      alert(`Unexpected error uploading image: ${error.message || error || 'Unknown error'}. You can enter the image URL manually below.`);
       return null;
     } finally {
       setUploading(false);
@@ -200,16 +219,22 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
       };
 
       if (product) {
+        console.log('📝 ProductForm: Updating product with data:', productData);
         const { error } = await supabase
           .from("products")
           .update(productData)
           .eq("id", product.id);
         if (error) throw error;
+        console.log('✅ ProductForm: Product updated successfully');
       } else {
+        console.log('📝 ProductForm: Creating new product with data:', productData);
         const { error } = await supabase.from("products").insert(productData);
         if (error) throw error;
+        console.log('✅ ProductForm: Product created successfully');
       }
 
+      // Add a small delay to ensure database changes are propagated
+      await new Promise(resolve => setTimeout(resolve, 500));
       onSave();
     } catch (error) {
       console.error("Error saving product:", error);
