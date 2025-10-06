@@ -16,7 +16,7 @@ export default defineConfig({
     outDir: "dist/spa",
     // Optimize for production deployment
     sourcemap: false,
-    minify: 'terser',
+    minify: 'esbuild', // Use esbuild instead of terser (faster and included by default)
     rollupOptions: {
       output: {
         manualChunks: {
