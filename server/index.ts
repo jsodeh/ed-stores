@@ -25,8 +25,25 @@ export function createServer() {
   // Profile debugging route
   app.get("/api/profile/:userId", handleGetProfile);
 
-  // Serve static files from the SPA build directory
-  app.use(express.static(path.join(__dirname, "../spa")));
+  // Serve static files - try multiple possible locations
+  const possibleStaticPaths = [
+    path.join(__dirname, "../spa"),           // Production build
+    path.join(__dirname, "../dist/spa"),      // Alternative build location
+    path.join(__dirname, "../client"),        // Development fallback
+  ];
+  
+  let staticPath = null;
+  for (const testPath of possibleStaticPaths) {
+    if (fs.existsSync(testPath)) {
+      staticPath = testPath;
+      console.log(`📁 Using static files from: ${staticPath}`);
+      break;
+    }
+  }
+  
+  if (staticPath) {
+    app.use(express.static(staticPath));
+  }
 
   // SPA fallback - serve index.html for all non-API routes
   app.get("*", (req, res, next) => {
@@ -35,14 +52,33 @@ export function createServer() {
       return next();
     }
     
-    // Serve index.html for client-side routing
-    const indexPath = path.join(__dirname, "../spa/index.html");
-    if (fs.existsSync(indexPath)) {
-      console.log(`📄 Serving SPA for route: ${req.path}`);
+    // Try multiple possible index.html locations
+    const possibleIndexPaths = [
+      path.join(__dirname, "../spa/index.html"),
+      path.join(__dirname, "../dist/spa/index.html"),
+      path.join(__dirname, "../index.html"),
+    ];
+    
+    let indexPath = null;
+    for (const testPath of possibleIndexPaths) {
+      if (fs.existsSync(testPath)) {
+        indexPath = testPath;
+        break;
+      }
+    }
+    
+    if (indexPath) {
+      console.log(`📄 Serving SPA for route: ${req.path} -> ${indexPath}`);
       res.sendFile(indexPath);
     } else {
-      console.log(`❌ index.html not found at: ${indexPath}`);
-      res.status(404).send('SPA build not found. Please run npm run build first.');
+      console.log(`❌ No index.html found. Tried paths:`, possibleIndexPaths);
+      res.status(404).send(`
+        <h1>SPA Not Found</h1>
+        <p>This appears to be a development server issue.</p>
+        <p>For development, please use: <code>npm run dev</code></p>
+        <p>For production, please run: <code>npm run build</code> first</p>
+        <p>Current route: ${req.path}</p>
+      `);
     }
   });
 

@@ -14,21 +14,43 @@ export default defineConfig({
   },
   build: {
     outDir: "dist/spa",
+    // Optimize for production deployment
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu']
+        }
+      }
+    }
   },
+  // Enable SPA mode for proper client-side routing
+  appType: 'spa',
   plugins: [
     react(),
     {
-      name: 'spa-fallback',
+      name: 'spa-fallback-middleware',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          // If the request is not for a file (no dot in the path) and not an API call or Vite internal route
-          if (!req.url.includes('.') && 
-              !req.url.startsWith('/@') && 
-              !req.url.startsWith('/api') &&
-              req.url !== '/favicon.ico') {
-            // Rewrite the request to serve index.html
-            req.url = '/';
+          const url = req.url;
+          
+          // Skip API routes, assets, and Vite internal routes
+          if (
+            url?.startsWith('/api') ||
+            url?.startsWith('/@') ||
+            url?.startsWith('/__vite') ||
+            url?.includes('.') ||
+            url === '/favicon.ico'
+          ) {
+            return next();
           }
+          
+          // For all other routes, rewrite to serve index.html
+          console.log(`🔄 Vite SPA: Rewriting ${url} -> /index.html`);
+          req.url = '/index.html';
           next();
         });
       }
