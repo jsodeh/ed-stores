@@ -25,8 +25,8 @@ export function createServer() {
   // Profile debugging route
   app.get("/api/profile/:userId", handleGetProfile);
 
-  // Serve static files from the client directory
-  app.use(express.static(path.join(__dirname, "../client")));
+  // Serve static files from the SPA build directory
+  app.use(express.static(path.join(__dirname, "../spa")));
 
   // SPA fallback - serve index.html for all non-API routes
   app.get("*", (req, res, next) => {
@@ -36,11 +36,13 @@ export function createServer() {
     }
     
     // Serve index.html for client-side routing
-    const indexPath = path.join(__dirname, "../index.html");
+    const indexPath = path.join(__dirname, "../spa/index.html");
     if (fs.existsSync(indexPath)) {
+      console.log(`📄 Serving SPA for route: ${req.path}`);
       res.sendFile(indexPath);
     } else {
-      next();
+      console.log(`❌ index.html not found at: ${indexPath}`);
+      res.status(404).send('SPA build not found. Please run npm run build first.');
     }
   });
 

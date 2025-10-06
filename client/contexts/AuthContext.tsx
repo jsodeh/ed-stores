@@ -331,23 +331,77 @@ export function AuthGuard({
   requireAuth?: boolean;
   requireAdmin?: boolean;
 }) {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, isAdmin, loading, user, profile } = useAuth();
 
-  if (loading) {
+  // Debug logging for AuthGuard
+  console.log('🛡️ AuthGuard: State check', {
+    loading,
+    isAuthenticated,
+    isAdmin,
+    requireAuth,
+    requireAdmin,
+    hasUser: !!user,
+    hasProfile: !!profile,
+    profileRole: profile?.role
+  });
+
+  // Add timeout for loading state to prevent infinite loops
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        console.warn('⚠️ AuthGuard: Loading timeout reached, forcing continue');
+        setLoadingTimeout(true);
+      }, 5000); // 5 second timeout
+      
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [loading]);
+
+  if (loading && !loadingTimeout) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+          <p className="text-sm text-gray-500 mt-2">Checking authentication status</p>
+        </div>
       </div>
     );
   }
 
   if (requireAuth && !isAuthenticated) {
-    return fallback || <div>Please sign in to access this page.</div>;
+    console.log('🛡️ AuthGuard: Authentication required but user not authenticated');
+    return fallback || (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+          <p className="text-gray-600">Please sign in to access this page.</p>
+        </div>
+      </div>
+    );
   }
 
   if (requireAdmin && !isAdmin) {
-    return fallback || <div>Access denied. Admin privileges required.</div>;
+    console.log('🛡️ AuthGuard: Admin access required but user is not admin', {
+      isAdmin,
+      profileRole: profile?.role,
+      isAuthenticated
+    });
+    return fallback || (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+          <p className="text-gray-600">Admin privileges required to access this page.</p>
+        </div>
+      </div>
+    );
   }
+
+  console.log('✅ AuthGuard: Access granted, rendering children');
 
   return <>{children}</>;
 }
