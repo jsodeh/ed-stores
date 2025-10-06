@@ -270,6 +270,27 @@ export default function Profile() {
                 </div>
               </div>
             </div>
+            
+            {/* Admin Quick Access Button */}
+            {isAdmin && (
+              <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">Admin Access</h3>
+                    <p className="text-sm text-yellow-700">Quick access to admin dashboard</p>
+                  </div>
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                    onClick={() => navigate("/admin")}
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    Dashboard
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -327,8 +348,11 @@ export default function Profile() {
                       >
                         <div className="flex items-center gap-3">
                           <IconComponent className="h-5 w-5 text-gray-600" />
-                          <span className="font-medium text-gray-900">
+                          <span className={`font-medium ${item.label === 'Admin Dashboard' && isAdmin ? 'text-yellow-600 font-bold' : 'text-gray-900'}`}>
                             {item.label}
+                            {item.label === 'Admin Dashboard' && isAdmin && (
+                              <span className="ml-2 bg-yellow-500 text-white text-xs px-1 rounded">ADMIN</span>
+                            )}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">

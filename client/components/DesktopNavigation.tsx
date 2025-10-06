@@ -1,4 +1,4 @@
-import { Home, Store, Heart, ShoppingCart, User } from "lucide-react";
+import { Home, Store, Heart, ShoppingCart, User, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LiveSearch } from "./LiveSearch";
@@ -7,18 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/contexts/StoreContext";
 import { useState } from "react";
 
-const navItems = [
-  { id: "home", icon: Home, label: "Home", path: "/" },
-  { id: "store", icon: Store, label: "Store", path: "/store" },
-  { id: "favorites", icon: Heart, label: "Favorites", path: "/favorites" },
-  { id: "cart", icon: ShoppingCart, label: "Cart", path: "/cart" },
-  { id: "profile", icon: User, label: "Profile", path: "/profile" },
-];
-
 export function DesktopNavigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const { cartItemCount } = useStore();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -32,6 +24,20 @@ export function DesktopNavigation() {
     }
     // Don't automatically navigate to homepage - let the user stay on the current page
   };
+
+  // Base navigation items
+  const baseNavItems = [
+    { id: "home", icon: Home, label: "Home", path: "/" },
+    { id: "store", icon: Store, label: "Store", path: "/store" },
+    { id: "favorites", icon: Heart, label: "Favorites", path: "/favorites" },
+    { id: "cart", icon: ShoppingCart, label: "Cart", path: "/cart" },
+    { id: "profile", icon: User, label: "Profile", path: "/profile" },
+  ];
+
+  // Add admin dashboard link for admin users
+  const navItems = isAdmin 
+    ? [...baseNavItems, { id: "admin", icon: Settings, label: "Admin", path: "/admin" }] 
+    : baseNavItems;
 
   return (
     <>
@@ -55,7 +61,9 @@ export function DesktopNavigation() {
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
                     isActive 
                       ? 'bg-primary/10 text-primary' 
-                      : 'text-gray-600 hover:text-primary hover:bg-gray-50'
+                      : item.id === 'admin' && isAdmin
+                        ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                        : 'text-gray-600 hover:text-primary hover:bg-gray-50'
                   }`}
                 >
                   <IconComponent className="h-4 w-4" />
@@ -63,6 +71,11 @@ export function DesktopNavigation() {
                   {item.id === "cart" && cartItemCount > 0 && (
                     <span className="bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {cartItemCount}
+                    </span>
+                  )}
+                  {item.id === "admin" && isAdmin && (
+                    <span className="bg-yellow-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      !
                     </span>
                   )}
                 </button>

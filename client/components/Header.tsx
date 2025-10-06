@@ -88,6 +88,17 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Admin Quick Access Button */}
+          {isAdmin && (
+            <button 
+              onClick={() => navigate("/admin")}
+              className="hidden md:flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              <span>Admin</span>
+            </button>
+          )}
+          
           <button 
             className="relative" 
             onClick={() => navigate("/cart")}
@@ -122,11 +133,14 @@ export function Header() {
                     <span>Favorites</span>
                   </DropdownMenuItem>
                   {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate("/admin")}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Admin Dashboard</span>
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/admin")}
+                      className="bg-yellow-50 border-l-4 border-yellow-500"
+                    >
+                      <Settings className="mr-2 h-4 w-4 text-yellow-600" />
+                      <span className="font-semibold text-yellow-700">Admin Dashboard</span>
                       {/* Visual indicator for debugging */}
-                      <span className="ml-2 bg-red-500 text-white text-xs px-1 rounded">ADMIN</span>
+                      <span className="ml-2 bg-yellow-500 text-white text-xs px-1 rounded">ADMIN</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={handleSignOut}>
