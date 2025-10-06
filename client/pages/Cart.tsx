@@ -24,7 +24,7 @@ export default function Cart() {
     navigate('/checkout');
   };
 
-  const deliveryFee = cartTotal > 50000 ? 0 : 2500; // Free delivery over ₦50,000
+  const deliveryFee = cartTotal > 50000 ? 0 : 1500; // Free delivery over ₦50,000
   const finalTotal = cartTotal + deliveryFee;
 
   // Log cart totals for debugging

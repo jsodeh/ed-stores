@@ -793,7 +793,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }, 0)
     : guestCart.reduce((count, item) => count + item.quantity, 0);
 
-  const deliveryFee = cartTotal >= 50000 ? 0 : 2500;
+  const deliveryFee = cartTotal >= 50000 ? 0 : 1500;
   const finalTotal = cartTotal + deliveryFee;
 
   const value: StoreContextType = {
