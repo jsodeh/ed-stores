@@ -18,6 +18,7 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import Profile from "./pages/Profile";
 import Orders from "./pages/Orders";
 import OrderDetails from "./pages/OrderDetails";
+import UserDebugPage from "./pages/UserDebug"; // Add this line
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminUsers from "./pages/admin/Users";
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/order/:orderId" element={<OrderDetails />} />
+              <Route path="/user-debug" element={<UserDebugPage />} /> {/* Add this line */}
 
               {/* Admin Routes - Protected with AuthGuard */}
               <Route 

@@ -1,56 +1,71 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+// Node.js script to check user role
+// Run with: node check-user-role.js
 
-// Load environment variables
-dotenv.config();
+const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://isgqdllaunoydbjweiwo.supabase.co';
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// You'll need to set these environment variables
+const supabaseUrl = process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'YOUR_SERVICE_KEY';
 
-if (!supabaseServiceRoleKey) {
-  console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY in environment variables');
-  process.exit(1);
-}
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
-
-async function checkUserRole() {
+async function checkUser() {
   try {
-    const userEmail = 'jsodeh@gmail.com';
-    console.log(`🔍 Checking role for user with email: ${userEmail}`);
+    console.log('🔍 Checking user with email: jsodeh@gmail.com');
     
-    // Find the user by email
-    const { data: userData, error: userError } = await supabase
+    // Check if user exists in user_profiles table
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('id, email, role')
-      .eq('email', userEmail)
+      .select('*')
+      .eq('email', 'jsodeh@gmail.com')
       .single();
-    
-    if (userError) {
-      console.error('❌ Error finding user:', userError);
+
+    if (profileError) {
+      console.error('❌ Error fetching user profile:', profileError);
       return;
     }
-    
-    if (!userData) {
-      console.error('❌ User not found with email:', userEmail);
+
+    if (!profile) {
+      console.log('⚠️ User profile not found in user_profiles table');
+      console.log('You may need to create a profile for this user');
       return;
     }
+
+    console.log('✅ User Profile Found:');
+    console.log('ID:', profile.id);
+    console.log('Email:', profile.email);
+    console.log('Full Name:', profile.full_name);
+    console.log('Role:', profile.role);
+    console.log('Created At:', profile.created_at);
     
-    console.log('✅ User found:', userData);
-    console.log('📋 User role:', userData.role);
+    // Check if user is admin/super_admin
+    const isAdmin = profile.role === 'admin' || profile.role === 'super_admin';
+    console.log('Is Admin:', isAdmin);
     
-    // Check if user is admin
-    const isAdmin = userData.role === 'admin' || userData.role === 'super_admin';
-    console.log('🔐 Is admin:', isAdmin);
+    if (!isAdmin) {
+      console.log('⚠️ User is not an admin. Updating role to super_admin...');
+      
+      const { data: updated, error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ role: 'super_admin' })
+        .eq('id', profile.id)
+        .select()
+        .single();
+        
+      if (updateError) {
+        console.error('❌ Error updating user role:', updateError);
+      } else {
+        console.log('✅ User role updated successfully');
+        console.log('New Role:', updated.role);
+      }
+    } else {
+      console.log('✅ User already has admin privileges');
+    }
     
-  } catch (err) {
-    console.error('❌ Error checking user role:', err);
+  } catch (error) {
+    console.error('❌ Error:', error);
   }
 }
 
-checkUserRole();
+// Run the check
+checkUser();

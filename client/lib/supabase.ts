@@ -160,6 +160,18 @@ export const profiles = {
     return { data, error };
   },
 
+  // Get user profile by email
+  getProfileByEmail: async (email: string) => {
+    console.log('📧 profiles.getProfileByEmail: Fetching profile for email:', email);
+    const { data, error } = await publicSupabase
+      .from("user_profiles")
+      .select("*")
+      .eq("email", email)
+      .single();
+    console.log('📧 profiles.getProfileByEmail: Result for email', email, { data, error });
+    return { data, error };
+  },
+
   // Update user profile
   updateProfile: async (userId: string, updates: any) => {
     const { data, error } = await supabase

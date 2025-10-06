@@ -28,6 +28,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { orders } from "@/lib/supabase";
 import { Order } from "@shared/database.types";
+import { UserDebug } from "@/components/UserDebug";
 
 export default function Profile() {
   const { cartItemCount, favoriteProducts, cartTotal } = useStore();
@@ -205,8 +206,11 @@ export default function Profile() {
       </div>
 
       <main className="max-w-4xl mx-auto p-4 pb-20 md:pb-8">
+        {/* Debug Info - Add this at the top */}
+        <UserDebug />
+        
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-6 mt-4">
           <Button
             variant="ghost"
             size="icon"

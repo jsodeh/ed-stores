@@ -184,10 +184,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isAuthenticated && user && guestCart.length > 0) {
       console.log('🛒 StoreContext: User signed in with guest cart, transferring items');
-      // Add a small delay to ensure user cart is ready
-      setTimeout(() => {
-        transferGuestCart();
-      }, 500);
+      // Remove the artificial delay - let the transfer happen immediately
+      transferGuestCart();
     }
   }, [isAuthenticated, user, guestCart]);
 
@@ -229,10 +227,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           },
           (payload) => {
             console.log('🛒 Cart change detected:', payload);
-            // Add a small delay to ensure the database operation is complete
-            setTimeout(() => {
-              refreshCart();
-            }, 100);
+            // Remove the artificial delay - refresh immediately
+            refreshCart();
           },
         )
         .subscribe((status) => {
@@ -474,11 +470,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         "cart"
       );
       
-      // Add a small delay to ensure the database operation is complete
-      // before refreshing the cart
-      setTimeout(() => {
-        refreshCart();
-      }, 100);
+      // Refresh cart immediately after successful database operation
+      await refreshCart();
       
       console.log('✅ StoreContext: Item added to cart successfully');
     } catch (error) {
@@ -557,11 +550,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const { error } = await cart.updateQuantity(user.id, productId, quantity);
       if (error) throw error;
       
-      // Add a small delay to ensure the database operation is complete
-      // before refreshing the cart
-      setTimeout(() => {
-        refreshCart();
-      }, 100);
+      // Refresh cart immediately after successful database operation
+      await refreshCart();
     } catch (error) {
       console.error("Error updating cart quantity:", error);
       toast({
@@ -612,11 +602,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const { error } = await cart.removeItem(user.id, productId);
       if (error) throw error;
       
-      // Add a small delay to ensure the database operation is complete
-      // before refreshing the cart
-      setTimeout(() => {
-        refreshCart();
-      }, 100);
+      // Refresh cart immediately after successful database operation
+      await refreshCart();
       
       toast({
         title: "Removed from cart",

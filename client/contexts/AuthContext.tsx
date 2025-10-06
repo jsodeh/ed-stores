@@ -14,6 +14,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<any>;
+  checkUserByEmail: (email: string) => Promise<any>; // Add this line
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,13 +25,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Debug function to check user by email
+  const checkUserByEmail = async (email: string) => {
+    try {
+      console.log('🔍 AuthContext: Checking user by email:', email);
+      
+      // Check in user_profiles table (public schema)
+      const { data: userProfiles, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', email);
+        
+      console.log('🔍 AuthContext: User profiles result:', { userProfiles, profileError });
+      
+      return {
+        userProfiles,
+        profileError
+      };
+    } catch (error) {
+      console.error('❌ AuthContext: Error checking user by email:', error);
+      return { error };
+    }
+  };
+
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
       console.log('🔄 AuthContext: Getting initial session');
       const { data: { session } } = await supabase.auth.getSession();
       console.log('🔄 AuthContext: Initial session result:', session ? 'Session exists' : 'No session');
-      console.log('🔄 AuthContext: Session details:', session);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -41,9 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('👤 AuthContext: No user in session, skipping profile load');
       }
       
-      // Add a small delay to ensure profile is loaded
-      console.log('🏁 AuthContext: Waiting a bit for profile to load...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Remove the artificial delay - let the profile loading handle timing
       console.log('🏁 AuthContext: Setting loading to false');
       setLoading(false);
       console.log('✅ AuthContext: Initial session loading complete');
@@ -56,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 AuthContext: Auth state change event:', event, session ? 'Session exists' : 'No session');
-        console.log('🔄 AuthContext: Session details:', session);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -68,11 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
         
-        // Add a small delay to ensure profile is loaded
-        console.log('🏁 AuthContext: Waiting a bit for profile to load after auth change...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // Only set loading to false after processing the auth state change
-        // This ensures that dependent contexts (like StoreContext) know the auth state is stable
+        // Remove the artificial delay - let the profile loading handle timing
         console.log('🏁 AuthContext: Setting loading to false after auth state change');
         setLoading(false);
       }
@@ -91,21 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('👤 AuthContext: Profile data received:', { data, error });
       if (error) {
         console.error('❌ AuthContext: Error loading profile:', error);
-        // Try to get profile with service role key as fallback
-        console.log('🔄 AuthContext: Trying fallback profile fetch...');
-        try {
-          const fallbackResult = await fetch(`http://localhost:8085/api/profile/${userId}`);
-          if (fallbackResult.ok) {
-            const fallbackData = await fallbackResult.json();
-            console.log('✅ AuthContext: Fallback profile loaded:', fallbackData);
-            setProfile(fallbackData);
-            return;
-          } else {
-            console.error('❌ AuthContext: Fallback profile fetch failed:', fallbackResult.status);
-          }
-        } catch (fetchError) {
-          console.error('❌ AuthContext: Fallback profile fetch error:', fetchError);
-        }
         return;
       }
       console.log('✅ AuthContext: Profile loaded for user:', userId, data);
@@ -259,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     updateProfile,
+    checkUserByEmail,
   };
 
   return (

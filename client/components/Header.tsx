@@ -17,33 +17,10 @@ export function Header() {
   const { user, isAuthenticated, signOut, isAdmin, profile, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Debugging: Log auth state changes
-  useEffect(() => {
-    console.log('🔍 Header: Auth state updated', {
-      isAuthenticated,
-      isAdmin,
-      loading,
-      userRole: profile?.role,
-      userId: user?.id,
-      userEmail: user?.email,
-      // Add more detailed debugging
-      profileData: profile,
-      userData: user
-    });
-    
-    // Additional debugging for admin status
-    if (user) {
-      console.log('🔍 Header: User detected - checking admin status');
-      console.log('🔍 Header: Profile role:', profile?.role);
-      console.log('🔍 Header: Is admin check:', profile?.role === 'admin' || profile?.role === 'super_admin');
-      console.log('🔍 Header: Raw profile data:', JSON.stringify(profile, null, 2));
-    }
-  }, [isAuthenticated, isAdmin, profile, user, loading]);
-  
-  // Additional debugging - force re-render if we detect admin status
+  // Log admin status changes
   useEffect(() => {
     if (isAdmin) {
-      console.log('🎉 Header: Admin status detected - forcing re-render');
+      console.log('🎉 Header: Admin access confirmed');
     }
   }, [isAdmin]);
   
