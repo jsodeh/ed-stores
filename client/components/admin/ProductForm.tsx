@@ -87,29 +87,54 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
       setUploading(true);
+      console.log('Starting image upload...', { 
+        fileName: file.name, 
+        fileSize: file.size, 
+        fileType: file.type 
+      });
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       
-      const { data, error } = await supabase.storage
+      console.log('Uploading file to storage...', { fileName });
+      
+      // Add timeout to prevent hanging
+      const uploadPromise = supabase.storage
         .from('product-images')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
         });
+      
+      // Timeout after 30 seconds
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+      );
+      
+      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any;
 
       if (error) {
-        throw error;
+        console.error('Supabase storage upload error:', error);
+        alert(`Error uploading image: ${error.message || 'Unknown error'}. Please try again.`);
+        return null;
       }
 
+      console.log('Upload successful, getting public URL...', { data });
+      
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
         .getPublicUrl(fileName);
 
+      console.log('Public URL retrieved:', { publicUrl });
       return publicUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      alert('Error uploading image. Please try again.');
+      if (error.message?.includes('timeout')) {
+        alert('Upload timed out. Please check your internet connection and try again.');
+      } else {
+        alert(`Error uploading image: ${error.message || error || 'Unknown error'}. Please try again.`);
+      }
       return null;
     } finally {
       setUploading(false);
@@ -119,6 +144,12 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    console.log('File selected for upload:', { 
+      name: file.name, 
+      size: file.size, 
+      type: file.type 
+    });
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -134,7 +165,10 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
     const imageUrl = await uploadImage(file);
     if (imageUrl) {
+      console.log('Image uploaded successfully:', { imageUrl });
       setFormData((prev) => ({ ...prev, image_url: imageUrl }));
+    } else {
+      console.log('Image upload failed');
     }
   };
 
@@ -368,6 +402,11 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
                     </>
                   )}
                 </Button>
+                {uploading && (
+                  <span className="text-sm text-blue-600 ml-2">
+                    Please wait... (This may take a moment)
+                  </span>
+                )}
                 <span className="text-sm text-gray-500">
                   {formData.image_url ? "Replace image" : "No image selected"}
                 </span>
