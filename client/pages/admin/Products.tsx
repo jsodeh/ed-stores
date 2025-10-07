@@ -342,6 +342,9 @@ export default function AdminProducts() {
       {/* Product Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Product Form</DialogTitle>
+          </DialogHeader>
           <ProductForm
             product={editingProduct || undefined}
             onSave={handleFormSave}
