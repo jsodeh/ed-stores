@@ -40,30 +40,33 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboardData();
-    
-    // Add timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn('⏰ Dashboard: Loading timeout reached, forcing completion');
-        setLoading(false);
-        setStats({
-          totalUsers: 0,
-          totalProducts: 0,
-          totalOrders: 0,
-          totalRevenue: 0,
-          recentOrders: [],
-          lowStockProducts: [],
-          recentUsers: [],
-          orderStats: { pending: 0, confirmed: 0, delivered: 0, cancelled: 0 }
-        });
-      }
-    }, 10000); // 10 second timeout
-
-    return () => clearTimeout(timeout);
-  }, [loading]);
+  }, []); // Empty dependency array - only run once on mount
 
   const loadDashboardData = async () => {
+    // Prevent multiple simultaneous calls
+    if (loading) {
+      console.log('📊 Dashboard: Already loading, skipping...');
+      return;
+    }
+    
     setLoading(true);
+    
+    // Add timeout protection
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Dashboard: Loading timeout reached, forcing completion');
+      setLoading(false);
+      setStats({
+        totalUsers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        recentOrders: [],
+        lowStockProducts: [],
+        recentUsers: [],
+        orderStats: { pending: 0, confirmed: 0, delivered: 0, cancelled: 0 }
+      });
+    }, 8000); // 8 second timeout
+    
     try {
       console.log('📊 Dashboard: Loading dashboard data...');
       
@@ -162,6 +165,7 @@ export default function AdminDashboard() {
         orderStats: { pending: 0, confirmed: 0, delivered: 0, cancelled: 0 }
       });
     } finally {
+      clearTimeout(timeoutId); // Clear the timeout
       console.log('🏁 Dashboard: Setting loading to false');
       setLoading(false);
     }
