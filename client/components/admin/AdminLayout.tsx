@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useContext, createContext } from "react";
+import { useState, useEffect, useMemo, useContext, createContext, type ReactNode } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
