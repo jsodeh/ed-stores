@@ -180,3 +180,4 @@ export function AdminLayout({ title }: AdminLayoutProps) {
   );
 }
 
+export const AdminPage = AdminLayout;
