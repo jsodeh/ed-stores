@@ -49,7 +49,7 @@ const getDefaultTitle = (path: string) => {
 };
 
 interface AdminLayoutProps {
-  children?: React.ReactNode; // Optional children for flexibility
+  children?: ReactNode; // Optional children for flexibility
   title?: string;
 }
 
