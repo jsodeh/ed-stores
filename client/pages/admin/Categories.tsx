@@ -358,6 +358,9 @@ export default function AdminCategories() {
       {/* Category Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Category Form</DialogTitle>
+          </DialogHeader>
           <CategoryForm
             category={editingCategory || undefined}
             onSave={handleFormSave}
