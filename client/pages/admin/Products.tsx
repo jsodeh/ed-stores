@@ -68,6 +68,8 @@ export default function AdminProducts() {
         category_color: product.categories?.color || null,
         average_rating: 0,
         review_count: 0,
+        // Ensure category_id is properly set for form editing
+        category_id: product.category_id || product.categories?.id || null,
         // Add timestamp to force image refresh
         image_url: product.image_url ? `${product.image_url}?t=${timestamp}` : product.image_url
       }));

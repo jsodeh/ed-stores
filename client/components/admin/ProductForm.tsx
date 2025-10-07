@@ -46,7 +46,8 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   useEffect(() => {
     loadCategories();
     if (product) {
-      setFormData({
+      console.log('📝 ProductForm: Initializing form with product data:', product);
+      const initialFormData = {
         name: product.name || "",
         description: product.description || "",
         price: product.price?.toString() || "",
@@ -59,16 +60,20 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
         image_url: product.image_url || "",
         weight: product.weight?.toString() || "",
         tags: product.tags?.join(", ") || "",
-      });
+      };
+      console.log('📝 ProductForm: Initial form data:', initialFormData);
+      setFormData(initialFormData);
     }
   }, [product]);
 
   const loadCategories = async () => {
+    console.log('📂 ProductForm: Loading categories...');
     const { data } = await supabase
       .from("categories")
       .select("*")
       .eq("is_active", true)
       .order("sort_order");
+    console.log('📂 ProductForm: Categories loaded:', data?.length || 0);
     setCategories(data || []);
   };
 
@@ -185,10 +190,15 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
     const imageUrl = await uploadImage(file);
     if (imageUrl) {
-      console.log('Image uploaded successfully:', { imageUrl });
-      setFormData((prev) => ({ ...prev, image_url: imageUrl }));
+      console.log('🖼️ ProductForm: Image uploaded successfully:', { imageUrl });
+      console.log('🖼️ ProductForm: Updating form data with image URL');
+      setFormData((prev) => {
+        const updated = { ...prev, image_url: imageUrl };
+        console.log('🖼️ ProductForm: Form data after image update:', updated);
+        return updated;
+      });
     } else {
-      console.log('Image upload failed');
+      console.log('❌ ProductForm: Image upload failed');
     }
   };
 
@@ -197,6 +207,9 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
     setLoading(true);
 
     try {
+      // Debug: Log form data before processing
+      console.log('📝 ProductForm: Form data before submission:', formData);
+      
       const productData = {
         name: formData.name,
         description: formData.description || null,
@@ -217,20 +230,43 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           : [],
         updated_at: new Date().toISOString(),
       };
+      
+      // Debug: Log processed product data
+      console.log('📝 ProductForm: Processed product data:', productData);
 
       if (product) {
-        console.log('📝 ProductForm: Updating product with data:', productData);
-        const { error } = await supabase
+        console.log('📝 ProductForm: Updating existing product:', product.id);
+        console.log('📝 ProductForm: Update data:', productData);
+        
+        const { data: updatedProduct, error } = await supabase
           .from("products")
           .update(productData)
-          .eq("id", product.id);
-        if (error) throw error;
-        console.log('✅ ProductForm: Product updated successfully');
+          .eq("id", product.id)
+          .select()
+          .single();
+          
+        if (error) {
+          console.error('❌ ProductForm: Update error:', error);
+          throw error;
+        }
+        
+        console.log('✅ ProductForm: Product updated successfully:', updatedProduct);
       } else {
-        console.log('📝 ProductForm: Creating new product with data:', productData);
-        const { error } = await supabase.from("products").insert(productData);
-        if (error) throw error;
-        console.log('✅ ProductForm: Product created successfully');
+        console.log('📝 ProductForm: Creating new product');
+        console.log('📝 ProductForm: Insert data:', productData);
+        
+        const { data: newProduct, error } = await supabase
+          .from("products")
+          .insert(productData)
+          .select()
+          .single();
+          
+        if (error) {
+          console.error('❌ ProductForm: Insert error:', error);
+          throw error;
+        }
+        
+        console.log('✅ ProductForm: Product created successfully:', newProduct);
       }
 
       // Add a small delay to ensure database changes are propagated
