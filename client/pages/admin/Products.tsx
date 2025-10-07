@@ -338,7 +338,6 @@ export default function AdminProducts() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
       {/* Product Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
