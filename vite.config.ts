@@ -7,6 +7,12 @@ export default defineConfig({
   server: {
     host: "::",
     port: 8080,
+    // Disable Vite's built-in error overlay to avoid runtime crashes in
+    // environments where the overlay's stack/frame parsing can encounter
+    // unexpected values (some browser extensions or remote dev clients).
+    hmr: {
+      overlay: false,
+    },
     fs: {
       allow: ["./client", "./shared", "."],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
