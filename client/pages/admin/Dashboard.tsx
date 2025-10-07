@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,7 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false); // Track loading state with ref
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,17 +44,19 @@ export default function AdminDashboard() {
   }, []); // Empty dependency array - only run once on mount
 
   const loadDashboardData = async () => {
-    // Prevent multiple simultaneous calls
-    if (loading) {
+    // Prevent multiple simultaneous calls using ref
+    if (loadingRef.current) {
       console.log('📊 Dashboard: Already loading, skipping...');
       return;
     }
     
+    loadingRef.current = true;
     setLoading(true);
     
     // Add timeout protection
     const timeoutId = setTimeout(() => {
       console.warn('⏰ Dashboard: Loading timeout reached, forcing completion');
+      loadingRef.current = false;
       setLoading(false);
       setStats({
         totalUsers: 0,
@@ -94,6 +97,16 @@ export default function AdminDashboard() {
       ]);
 
       // Extract results with error handling
+      const queryNames = [
+        'user_profiles (customers)',
+        'products (count)',
+        'orders (revenue)',
+        'order_details (recent)',
+        'products (low stock)',
+        'user_profiles (recent)',
+        'orders (status)'
+      ];
+      
       const [
         usersResult,
         productsResult,
@@ -104,10 +117,10 @@ export default function AdminDashboard() {
         orderStatsResult,
       ] = results.map((result, index) => {
         if (result.status === 'fulfilled') {
-          console.log(`✅ Dashboard: Query ${index} successful:`, result.value.data?.length || 0, 'items');
+          console.log(`✅ Dashboard: ${queryNames[index]} successful:`, result.value.data?.length || 0, 'items');
           return result.value;
         } else {
-          console.error(`❌ Dashboard: Query ${index} failed:`, result.reason);
+          console.error(`❌ Dashboard: ${queryNames[index]} failed:`, result.reason);
           return { data: [], error: result.reason };
         }
       });
@@ -166,6 +179,7 @@ export default function AdminDashboard() {
       });
     } finally {
       clearTimeout(timeoutId); // Clear the timeout
+      loadingRef.current = false; // Reset loading ref
       console.log('🏁 Dashboard: Setting loading to false');
       setLoading(false);
     }
