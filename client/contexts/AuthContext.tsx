@@ -49,41 +49,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+    
     // Get initial session
     const getInitialSession = async () => {
-      console.log('🔄 AuthContext: Getting initial session');
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔄 AuthContext: Initial session result:', session ? 'Session exists' : 'No session');
-      setSession(session);
-      setUser(session?.user ?? null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        console.log('👤 AuthContext: Loading profile for user:', session.user.id);
-        await loadUserProfile(session.user.id);
-      } else {
-        console.log('👤 AuthContext: No user in session, skipping profile load');
-        // Ensure loading is set to false even when no user
-        setLoading(false);
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('AuthContext: Error getting initial session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-
-      console.log('✅ AuthContext: Initial session loading complete');
     };
 
-    console.log('🔄 AuthContext: useEffect triggered');
     getInitialSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 AuthContext: Auth state change event:', event, session ? 'Session exists' : 'No session');
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          console.log('👤 AuthContext: User signed in, loading profile for user:', session.user.id);
           await loadUserProfile(session.user.id);
         } else {
-          console.log('🚪 AuthContext: User signed out, clearing profile');
           setProfile(null);
           setLoading(false);
         }
@@ -91,43 +94,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     return () => {
-      console.log('🧹 AuthContext: Unsubscribing from auth state changes');
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const loadUserProfile = async (userId: string) => {
     try {
-      console.log('👤 AuthContext: Loading profile for user:', userId);
       const { data, error } = await profiles.getProfile(userId);
-      console.log('👤 AuthContext: Profile data received:', { data, error });
+      
       if (error) {
-        console.error('❌ AuthContext: Error loading profile:', error);
+        console.error('AuthContext: Error loading profile:', error);
         setProfile(null);
         return;
       }
-      console.log('✅ AuthContext: Profile loaded for user:', userId, data);
-
-      // Additional debugging for role verification
-      if (data?.role) {
-        console.log('📋 AuthContext: Profile role verification:', {
-          role: data.role,
-          roleType: typeof data.role,
-          isAdmin: data.role === 'admin' || data.role === 'super_admin',
-          isSuperAdmin: data.role === 'super_admin'
-        });
-      } else {
-        console.warn('⚠️ AuthContext: Profile loaded but role is missing or null:', data);
-      }
 
       setProfile(data);
-      // Log the role directly after setting it
-      console.log('📋 AuthContext: Profile role after setting:', data?.role);
+      
+      // Store admin status for persistence
+      if (data?.role && (data.role === 'admin' || data.role === 'super_admin')) {
+        localStorage.setItem('userIsAdmin', 'true');
+        localStorage.setItem('userRole', data.role);
+      } else {
+        localStorage.removeItem('userIsAdmin');
+        localStorage.removeItem('userRole');
+      }
     } catch (error) {
-      console.error('❌ AuthContext: Error loading profile:', error);
+      console.error('AuthContext: Error loading profile:', error);
       setProfile(null);
     } finally {
-      // Always set loading to false after profile loading attempt
       setLoading(false);
     }
   };
@@ -215,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin' ||
     (loading && isAuthenticated && localStorage.getItem('userIsAdmin') === 'true');
 
-  // Store admin status in localStorage for persistence across reloads
+  // Clean up localStorage when profile changes
   useEffect(() => {
     if (profile?.role && (profile.role === 'admin' || profile.role === 'super_admin')) {
       localStorage.setItem('userIsAdmin', 'true');
@@ -225,70 +220,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('userRole');
     }
   }, [profile?.role]);
-
-  // Additional debugging for role checking
-  console.log('🔐 AuthContext: Role checking details', {
-    profileRole: profile?.role,
-    profileRoleType: typeof profile?.role,
-    profileRoleIsNull: profile?.role === null,
-    profileRoleIsUndefined: profile?.role === undefined,
-    isAdminCheck1: profile?.role === 'admin',
-    isAdminCheck2: profile?.role === 'super_admin',
-    finalIsAdmin: isAdmin,
-    storedAdminStatus: localStorage.getItem('userIsAdmin'),
-    storedRole: localStorage.getItem('userRole')
-  });
-
-  // Debug logging - moved to useEffect to reduce console spam
-  useEffect(() => {
-    console.log('🔐 AuthContext: isAdmin calculation', {
-      profileRole: profile?.role,
-      profileId: profile?.id,
-      isAdmin,
-      isSuperAdmin: profile?.role === 'super_admin',
-      profileExists: !!profile,
-      userExists: !!user,
-      // Add more detailed debugging
-      profileData: profile,
-      userObject: user,
-      // Add timestamp for debugging
-      timestamp: new Date().toISOString()
-    });
-  }, [profile, user, isAdmin]);
-
-  // Add a force refresh mechanism for debugging
-  const forceRefreshProfile = async () => {
-    if (user?.id) {
-      console.log('🔄 AuthContext: Force refreshing profile for user:', user.id);
-      await loadUserProfile(user.id);
-    }
-  };
-
-  // Make forceRefreshProfile available globally for debugging
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).forceRefreshProfile = forceRefreshProfile;
-    }
-  }, [user]);
-
-  // Track isAdmin changes
-  useEffect(() => {
-    console.log('🔄 AuthContext: isAdmin changed to:', isAdmin);
-    // Force a re-render if isAdmin is true but components aren't updating
-    if (isAdmin) {
-      console.log('🎉 AuthContext: Admin access confirmed - forcing update');
-    }
-  }, [isAdmin]);
-
-  // Debug profile changes
-  useEffect(() => {
-    console.log('🔄 AuthContext: Profile state changed:', profile);
-  }, [profile]);
-
-  // Debug user changes
-  useEffect(() => {
-    console.log('🔄 AuthContext: User state changed:', user);
-  }, [user]);
 
   const value = {
     user,
@@ -333,27 +264,14 @@ export function AuthGuard({
 }) {
   const { isAuthenticated, isAdmin, loading, user, profile } = useAuth();
 
-  // Debug logging for AuthGuard
-  console.log('🛡️ AuthGuard: State check', {
-    loading,
-    isAuthenticated,
-    isAdmin,
-    requireAuth,
-    requireAdmin,
-    hasUser: !!user,
-    hasProfile: !!profile,
-    profileRole: profile?.role
-  });
-
   // Add timeout for loading state to prevent infinite loops
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
-        console.warn('⚠️ AuthGuard: Loading timeout reached, forcing continue');
         setLoadingTimeout(true);
-      }, 5000); // 5 second timeout
+      }, 3000); // Reduced to 3 seconds
       
       return () => clearTimeout(timer);
     } else {
@@ -365,16 +283,14 @@ export function AuthGuard({
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-          <p className="text-sm text-gray-500 mt-2">Checking authentication status</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-gray-500">Loading...</p>
         </div>
       </div>
     );
   }
 
   if (requireAuth && !isAuthenticated) {
-    console.log('🛡️ AuthGuard: Authentication required but user not authenticated');
     return fallback || (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -386,11 +302,6 @@ export function AuthGuard({
   }
 
   if (requireAdmin && !isAdmin) {
-    console.log('🛡️ AuthGuard: Admin access required but user is not admin', {
-      isAdmin,
-      profileRole: profile?.role,
-      isAuthenticated
-    });
     return fallback || (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -400,8 +311,6 @@ export function AuthGuard({
       </div>
     );
   }
-
-  console.log('✅ AuthGuard: Access granted, rendering children');
 
   return <>{children}</>;
 }

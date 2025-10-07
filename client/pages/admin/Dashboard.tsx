@@ -40,21 +40,35 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+    
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('⏰ Dashboard: Loading timeout reached, forcing completion');
+        setLoading(false);
+        setStats({
+          totalUsers: 0,
+          totalProducts: 0,
+          totalOrders: 0,
+          totalRevenue: 0,
+          recentOrders: [],
+          lowStockProducts: [],
+          recentUsers: [],
+          orderStats: { pending: 0, confirmed: 0, delivered: 0, cancelled: 0 }
+        });
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Load all dashboard data in parallel
-      const [
-        usersResult,
-        productsResult,
-        ordersResult,
-        recentOrdersResult,
-        lowStockResult,
-        recentUsersResult,
-        orderStatsResult,
-      ] = await Promise.all([
+      console.log('📊 Dashboard: Loading dashboard data...');
+      
+      // Load dashboard data with individual error handling
+      const results = await Promise.allSettled([
         supabase.from("user_profiles").select("id").eq("role", "customer"),
         supabase.from("products").select("id"),
         supabase.from("orders").select("total_amount"),
@@ -66,7 +80,7 @@ export default function AdminDashboard() {
         supabase
           .from("products")
           .select("id, name, stock_quantity, low_stock_threshold")
-          .lt("stock_quantity", "low_stock_threshold")
+          .filter("stock_quantity", "lt", "low_stock_threshold")
           .limit(5),
         supabase
           .from("user_profiles")
@@ -76,7 +90,26 @@ export default function AdminDashboard() {
         supabase.from("orders").select("status"),
       ]);
 
-      // Calculate stats
+      // Extract results with error handling
+      const [
+        usersResult,
+        productsResult,
+        ordersResult,
+        recentOrdersResult,
+        lowStockResult,
+        recentUsersResult,
+        orderStatsResult,
+      ] = results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          console.log(`✅ Dashboard: Query ${index} successful:`, result.value.data?.length || 0, 'items');
+          return result.value;
+        } else {
+          console.error(`❌ Dashboard: Query ${index} failed:`, result.reason);
+          return { data: [], error: result.reason };
+        }
+      });
+
+      // Calculate stats with safe fallbacks
       const totalUsers = usersResult.data?.length || 0;
       const totalProducts = productsResult.data?.length || 0;
       const totalOrders = ordersResult.data?.length || 0;
@@ -86,14 +119,16 @@ export default function AdminDashboard() {
           0,
         ) || 0;
 
-      // Order stats by status
+      // Order stats by status with safe handling
       const ordersByStatus = orderStatsResult.data?.reduce(
         (acc: any, order) => {
-          acc[order.status] = (acc[order.status] || 0) + 1;
+          if (order.status) {
+            acc[order.status] = (acc[order.status] || 0) + 1;
+          }
           return acc;
         },
         {},
-      );
+      ) || {};
 
       const dashboardStats: DashboardStats = {
         totalUsers,
@@ -111,10 +146,23 @@ export default function AdminDashboard() {
         },
       };
 
+      console.log('📊 Dashboard: Stats calculated:', dashboardStats);
       setStats(dashboardStats);
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      console.error("❌ Dashboard: Error loading dashboard data:", error);
+      // Set empty stats on error to prevent infinite loading
+      setStats({
+        totalUsers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        recentOrders: [],
+        lowStockProducts: [],
+        recentUsers: [],
+        orderStats: { pending: 0, confirmed: 0, delivered: 0, cancelled: 0 }
+      });
     } finally {
+      console.log('🏁 Dashboard: Setting loading to false');
       setLoading(false);
     }
   };
