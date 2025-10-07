@@ -354,7 +354,6 @@ export default function AdminCategories() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
       {/* Category Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
