@@ -32,11 +32,11 @@ const adminMenuItems = [
 ];
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode; // Optional children for flexibility
   title?: string;
 }
 
-export function AdminLayout({ children, title }: AdminLayoutProps) {
+export function AdminLayout({ title }: AdminLayoutProps) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,9 +54,9 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
       <div className="min-h-screen bg-gray-50 flex">
         {/* Sidebar */}
         <div className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0 lg:static lg:inset-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          w-64 bg-white shadow-lg flex-shrink-0
+          lg:block
+          ${sidebarOpen ? 'block' : 'hidden lg:block'}
         `}>
           <div className="flex flex-col h-full">
             {/* Header */}
@@ -136,7 +136,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col lg:ml-64">
+        <div className="flex-1 flex flex-col">
           {/* Header */}
           <header className="bg-white border-b sticky top-0 z-10">
             <div className="flex items-center justify-between p-4">
@@ -164,7 +164,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
 
           {/* Page content */}
           <main className="p-4 lg:p-6">
-            {children}
+            <Outlet />
           </main>
         </div>
 
@@ -180,11 +180,3 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
   );
 }
 
-// Wrapper component for admin pages
-export function AdminPage({ title, children }: AdminLayoutProps) {
-  return (
-    <AdminLayout title={title}>
-      {children}
-    </AdminLayout>
-  );
-}

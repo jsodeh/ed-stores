@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { AdminPage } from "@/components/admin/AdminLayout";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,24 +19,45 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const loadingRef = useRef(false);
+
   useEffect(() => {
     loadUsers();
   }, []);
 
   const loadUsers = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
+    console.log('👥 Users: Loading users...');
+
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Users: Loading timeout reached, forcing completion');
+      setLoading(false);
+      loadingRef.current = false;
+    }, 10000);
+
     try {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Users: Error loading users:', error);
+        throw error;
+      }
+      
+      console.log('✅ Users: Loaded users:', data?.length || 0);
       setUsers(data || []);
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('❌ Users: Exception loading users:', error);
+      setUsers([]); // Set empty array on error
     } finally {
+      clearTimeout(timeoutId);
+      console.log('🏁 Users: Setting loading to false');
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -67,17 +87,14 @@ export default function AdminUsers() {
 
   if (loading) {
     return (
-      <AdminPage title="Users Management">
-        <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      </AdminPage>
     );
   }
 
   return (
-    <AdminPage title="Users Management">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1 max-w-md">
@@ -200,6 +217,5 @@ export default function AdminUsers() {
           </CardContent>
         </Card>
       </div>
-    </AdminPage>
   );
 }

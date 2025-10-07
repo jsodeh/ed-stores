@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { AdminPage } from "@/components/admin/AdminLayout";
+import { useState, useEffect, useRef } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,24 +38,45 @@ export default function AdminCategories() {
     null,
   );
 
+  const loadingRef = useRef(false);
+
   useEffect(() => {
     loadCategories();
   }, []);
 
   const loadCategories = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
+    console.log('📂 Categories: Loading categories...');
+
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Categories: Loading timeout reached, forcing completion');
+      setLoading(false);
+      loadingRef.current = false;
+    }, 10000);
+
     try {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
         .order("sort_order", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Categories: Error loading categories:', error);
+        throw error;
+      }
+
+      console.log('✅ Categories: Loaded categories successfully:', data?.length || 0);
       setCategories(data || []);
     } catch (error) {
-      console.error("Error loading categories:", error);
+      console.error('❌ Categories: Exception loading categories:', error);
+      setCategories([]);
     } finally {
+      clearTimeout(timeoutId);
+      console.log('🏁 Categories: Setting loading to false');
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -139,17 +159,14 @@ export default function AdminCategories() {
 
   if (loading) {
     return (
-      <AdminPage title="Categories Management">
-        <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      </AdminPage>
     );
   }
 
   return (
-    <AdminPage title="Categories Management">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1 max-w-md">
@@ -343,7 +360,7 @@ export default function AdminCategories() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <CategoryForm
-            category={editingCategory}
+            category={editingCategory || undefined}
             onSave={handleFormSave}
             onCancel={handleFormCancel}
           />
@@ -374,6 +391,6 @@ export default function AdminCategories() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AdminPage>
+    </div>
   );
 }

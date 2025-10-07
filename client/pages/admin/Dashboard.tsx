@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -199,17 +198,14 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <AdminPage title="Dashboard">
-        <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      </AdminPage>
     );
   }
 
   return (
-    <AdminPage title="Dashboard">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
@@ -474,6 +470,5 @@ export default function AdminDashboard() {
           </Card>
         </div>
       </div>
-    </AdminPage>
   );
 }

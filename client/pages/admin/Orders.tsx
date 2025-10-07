@@ -31,17 +31,34 @@ export default function AdminOrders() {
 
   const loadOrders = async () => {
     setLoading(true);
+    console.log('📋 Orders: Loading orders...');
+    
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Orders: Loading timeout reached, forcing completion');
+      setLoading(false);
+      setOrders([]);
+    }, 10000);
+    
     try {
       const { data, error } = await supabase
         .from('order_details')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Orders: Error loading orders:', error);
+        throw error;
+      }
+      
+      console.log('✅ Orders: Loaded orders successfully:', data?.length || 0);
       setOrders(data || []);
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('❌ Orders: Exception loading orders:', error);
+      setOrders([]); // Set empty array on error
     } finally {
+      clearTimeout(timeoutId);
+      console.log('🏁 Orders: Setting loading to false');
       setLoading(false);
     }
   };

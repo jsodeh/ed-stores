@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Orders from "./pages/Orders";
 import OrderDetails from "./pages/OrderDetails";
 import UserDebugPage from "./pages/UserDebug"; // Add this line
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminUsers from "./pages/admin/Users";
@@ -52,81 +53,27 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/order/:orderId" element={<OrderDetails />} />
-              <Route path="/user-debug" element={<UserDebugPage />} /> {/* Add this line */}
+              <Route path="/user-debug" element={<UserDebugPage />} />
 
-              {/* Admin Routes - Protected with AuthGuard */}
+              {/* Admin Routes */}
               <Route 
                 path="/admin" 
                 element={
                   <AuthGuard requireAuth requireAdmin>
-                    <AdminDashboard />
+                    <AdminLayout />
                   </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/products" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminProducts />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/users" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminUsers />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/orders" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminOrders />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/order/:orderId" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminOrderDetails />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/categories" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminCategories />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/inventory" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminInventory />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/messages" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminMessages />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin/notifications" 
-                element={
-                  <AuthGuard requireAuth requireAdmin>
-                    <AdminNotifications />
-                  </AuthGuard>
-                } 
-              />
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="order/:orderId" element={<AdminOrderDetails />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="inventory" element={<AdminInventory />} />
+                <Route path="messages" element={<AdminMessages />} />
+                <Route path="notifications" element={<AdminNotifications />} />
+              </Route>
 
               {/* Catch-all route for 404 pages */}
               <Route path="*" element={<NotFound />} />

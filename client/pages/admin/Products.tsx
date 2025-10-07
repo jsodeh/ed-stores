@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { AdminPage } from "@/components/admin/AdminLayout";
+import { useState, useEffect, useRef } from "react";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,14 +35,25 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
+  const loadingRef = useRef(false);
+
   useEffect(() => {
     loadProducts();
   }, []);
 
   const loadProducts = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
+    console.log('📦 Products: Loading products...');
+
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Products: Loading timeout reached, forcing completion');
+      setLoading(false);
+      loadingRef.current = false;
+    }, 10000);
+
     try {
-      // Add cache-busting parameter to ensure fresh data
       const timestamp = Date.now();
       const { data, error } = await supabase
         .from("products")
@@ -58,9 +68,11 @@ export default function AdminProducts() {
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      
-      // Transform data to match the view structure
+      if (error) {
+        console.error('❌ Products: Error loading products:', error);
+        throw error;
+      }
+
       const transformedData = (data || []).map(product => ({
         ...product,
         category_name: product.categories?.name || null,
@@ -68,18 +80,20 @@ export default function AdminProducts() {
         category_color: product.categories?.color || null,
         average_rating: 0,
         review_count: 0,
-        // Ensure category_id is properly set for form editing
         category_id: product.category_id || product.categories?.id || null,
-        // Add timestamp to force image refresh
         image_url: product.image_url ? `${product.image_url}?t=${timestamp}` : product.image_url
       }));
-      
-      console.log('📦 Admin Products: Loaded products with fresh data:', transformedData.length);
+
+      console.log('✅ Products: Loaded products successfully:', transformedData.length);
       setProducts(transformedData);
     } catch (error) {
-      console.error("Error loading products:", error);
+      console.error('❌ Products: Exception loading products:', error);
+      setProducts([]);
     } finally {
+      clearTimeout(timeoutId);
+      console.log('🏁 Products: Setting loading to false');
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -139,17 +153,14 @@ export default function AdminProducts() {
 
   if (loading) {
     return (
-      <AdminPage title="Products Management">
-        <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      </AdminPage>
     );
   }
 
   return (
-    <AdminPage title="Products Management">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1 max-w-md">
@@ -333,7 +344,7 @@ export default function AdminProducts() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <ProductForm
-            product={editingProduct}
+            product={editingProduct || undefined}
             onSave={handleFormSave}
             onCancel={handleFormCancel}
           />
@@ -364,6 +375,6 @@ export default function AdminProducts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AdminPage>
+    </div>
   );
 }
