@@ -4,7 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,10 +50,10 @@ export default function AdminProducts() {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
-    console.log('📦 Products: Loading products...');
+    console.log("📦 Products: Loading products...");
 
     const timeoutId = setTimeout(() => {
-      console.warn('⏰ Products: Loading timeout reached, forcing completion');
+      console.warn("⏰ Products: Loading timeout reached, forcing completion");
       setLoading(false);
       loadingRef.current = false;
     }, 10000);
@@ -57,7 +62,8 @@ export default function AdminProducts() {
       const timestamp = Date.now();
       const { data, error } = await supabase
         .from("products")
-        .select(`
+        .select(
+          `
           *,
           categories:category_id (
             id,
@@ -65,15 +71,16 @@ export default function AdminProducts() {
             slug,
             color
           )
-        `)
+        `,
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('❌ Products: Error loading products:', error);
+        console.error("❌ Products: Error loading products:", error);
         throw error;
       }
 
-      const transformedData = (data || []).map(product => ({
+      const transformedData = (data || []).map((product) => ({
         ...product,
         category_name: product.categories?.name || null,
         category_slug: product.categories?.slug || null,
@@ -81,17 +88,22 @@ export default function AdminProducts() {
         average_rating: 0,
         review_count: 0,
         category_id: product.category_id || product.categories?.id || null,
-        image_url: product.image_url ? `${product.image_url}?t=${timestamp}` : product.image_url
+        image_url: product.image_url
+          ? `${product.image_url}?t=${timestamp}`
+          : product.image_url,
       }));
 
-      console.log('✅ Products: Loaded products successfully:', transformedData.length);
+      console.log(
+        "✅ Products: Loaded products successfully:",
+        transformedData.length,
+      );
       setProducts(transformedData);
     } catch (error) {
-      console.error('❌ Products: Exception loading products:', error);
+      console.error("❌ Products: Exception loading products:", error);
       setProducts([]);
     } finally {
       clearTimeout(timeoutId);
-      console.log('🏁 Products: Setting loading to false');
+      console.log("🏁 Products: Setting loading to false");
       setLoading(false);
       loadingRef.current = false;
     }
@@ -154,190 +166,183 @@ export default function AdminProducts() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={loadProducts}
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              ) : (
-                "Refresh"
-              )}
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingProduct(null);
-                setShowForm(true);
-              }}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </div>
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Products</p>
-                  <p className="text-2xl font-bold">{products.length}</p>
-                </div>
-                <Package className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Active Products</p>
-                  <p className="text-2xl font-bold">
-                    {products.filter((p) => p.is_active).length}
-                  </p>
-                </div>
-                <Eye className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Low Stock</p>
-                  <p className="text-2xl font-bold">
-                    {
-                      products.filter(
-                        (p) =>
-                          (p.stock_quantity || 0) <
-                          (p.low_stock_threshold || 10),
-                      ).length
-                    }
-                  </p>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadProducts} disabled={loading}>
+            {loading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            ) : (
+              "Refresh"
+            )}
+          </Button>
+          <Button
+            onClick={() => {
+              setEditingProduct(null);
+              setShowForm(true);
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
         </div>
+      </div>
 
-        {/* Products Table */}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Products ({filteredProducts.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Product</th>
-                    <th className="text-left p-2">SKU</th>
-                    <th className="text-left p-2">Category</th>
-                    <th className="text-left p-2">Price</th>
-                    <th className="text-left p-2">Stock</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={product.image_url || "/placeholder.svg"}
-                            alt={product.name || ""}
-                            className="w-10 h-10 object-cover rounded"
-                          />
-                          <div>
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-gray-600">
-                              {product.sku}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <span className="font-mono text-sm">{product.sku}</span>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="outline">{product.category_name}</Badge>
-                      </td>
-                      <td className="p-2">
-                        <span className="font-semibold">
-                          {formatPrice(product.price || 0)}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <span
-                          className={`font-medium ${
-                            (product.stock_quantity || 0) <
-                            (product.low_stock_threshold || 10)
-                              ? "text-red-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {product.stock_quantity}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <Badge
-                          variant={product.is_active ? "default" : "secondary"}
-                        >
-                          {product.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(product)}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(product)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Products</p>
+                <p className="text-2xl font-bold">{products.length}</p>
+              </div>
+              <Package className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Active Products</p>
+                <p className="text-2xl font-bold">
+                  {products.filter((p) => p.is_active).length}
+                </p>
+              </div>
+              <Eye className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Low Stock</p>
+                <p className="text-2xl font-bold">
+                  {
+                    products.filter(
+                      (p) =>
+                        (p.stock_quantity || 0) < (p.low_stock_threshold || 10),
+                    ).length
+                  }
+                </p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Products Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Products ({filteredProducts.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Product</th>
+                  <th className="text-left p-2">SKU</th>
+                  <th className="text-left p-2">Category</th>
+                  <th className="text-left p-2">Price</th>
+                  <th className="text-left p-2">Stock</th>
+                  <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={product.image_url || "/placeholder.svg"}
+                          alt={product.name || ""}
+                          className="w-10 h-10 object-cover rounded"
+                        />
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-gray-600">{product.sku}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <span className="font-mono text-sm">{product.sku}</span>
+                    </td>
+                    <td className="p-2">
+                      <Badge variant="outline">{product.category_name}</Badge>
+                    </td>
+                    <td className="p-2">
+                      <span className="font-semibold">
+                        {formatPrice(product.price || 0)}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className={`font-medium ${
+                          (product.stock_quantity || 0) <
+                          (product.low_stock_threshold || 10)
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {product.stock_quantity}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <Badge
+                        variant={product.is_active ? "default" : "secondary"}
+                      >
+                        {product.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(product)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(product)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Product Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>

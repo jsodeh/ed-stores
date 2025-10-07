@@ -1,4 +1,11 @@
-import { useState, useEffect, useMemo, useContext, createContext, type ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useContext,
+  createContext,
+  type ReactNode,
+} from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +24,7 @@ import {
   Menu,
   X,
   Home,
-  Bell
+  Bell,
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -25,10 +32,30 @@ const adminMenuItems = [
   { id: "products", label: "Products", icon: Package, path: "/admin/products" },
   { id: "users", label: "Users", icon: Users, path: "/admin/users" },
   { id: "orders", label: "Orders", icon: ShoppingCart, path: "/admin/orders" },
-  { id: "categories", label: "Categories", icon: Tags, path: "/admin/categories" },
-  { id: "inventory", label: "Inventory", icon: Warehouse, path: "/admin/inventory" },
-  { id: "messages", label: "Messages", icon: MessageSquare, path: "/admin/messages" },
-  { id: "notifications", label: "Notifications", icon: Bell, path: "/admin/notifications" },
+  {
+    id: "categories",
+    label: "Categories",
+    icon: Tags,
+    path: "/admin/categories",
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    icon: Warehouse,
+    path: "/admin/inventory",
+  },
+  {
+    id: "messages",
+    label: "Messages",
+    icon: MessageSquare,
+    path: "/admin/messages",
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: Bell,
+    path: "/admin/notifications",
+  },
 ];
 
 const AdminLayoutContext = createContext<{
@@ -72,7 +99,7 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate("/");
   };
 
   const currentPath = location.pathname;
@@ -82,11 +109,13 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
       <AdminLayoutContext.Provider value={{ setPageTitle }}>
         <div className="min-h-screen bg-gray-50 flex">
           {/* Sidebar */}
-          <div className={`
+          <div
+            className={`
             w-64 bg-white shadow-lg flex-shrink-0
             lg:block
-            ${sidebarOpen ? 'block' : 'hidden lg:block'}
-          `}>
+            ${sidebarOpen ? "block" : "hidden lg:block"}
+          `}
+          >
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b">
@@ -117,7 +146,9 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
                       key={item.id}
                       variant="ghost"
                       className={`w-full justify-start ${
-                        isActive ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:text-primary'
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-600 hover:text-primary"
                       }`}
                       onClick={() => {
                         navigate(item.path);
@@ -137,12 +168,12 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={profile?.avatar_url || undefined} />
                     <AvatarFallback>
-                      {profile?.full_name?.slice(0, 2).toUpperCase() || 'AD'}
+                      {profile?.full_name?.slice(0, 2).toUpperCase() || "AD"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">
-                      {profile?.full_name || 'Admin User'}
+                      {profile?.full_name || "Admin User"}
                     </p>
                     <div className="flex items-center gap-1">
                       <Badge variant="secondary" className="text-xs">
@@ -184,17 +215,13 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Badge variant="outline">
-                    ED Superstore Admin
-                  </Badge>
+                  <Badge variant="outline">ED Superstore Admin</Badge>
                 </div>
               </div>
             </header>
 
             {/* Page content */}
-            <main className="p-4 lg:p-6">
-              {children ?? <Outlet />}
-            </main>
+            <main className="p-4 lg:p-6">{children ?? <Outlet />}</main>
           </div>
 
           {/* Overlay for mobile */}
