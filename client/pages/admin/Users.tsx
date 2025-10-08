@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { UserProfile } from "@shared/database.types";
 import {
@@ -18,16 +18,7 @@ import {
 } from "lucide-react";
 
 export default function AdminUsers() {
-  const { 
-    data: users, 
-    loading, 
-    error, 
-    refresh 
-  } = useRealtimeData<UserProfile>({
-    table: 'user_profiles',
-    select: '*',
-    orderBy: { column: 'created_at', ascending: false }
-  });
+  const { users, loading, error, refresh } = useAdminUsers();
 
   const [searchQuery, setSearchQuery] = useState("");
 
