@@ -184,8 +184,11 @@ export function useAdminStats() {
         orderStatsResult,
       ] = await Promise.allSettled([
         (async () => {
-          if (!token) throw new Error("Missing auth token");
-          const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
+          if (!token) return { data: [] } as const;
+          const controller = new AbortController();
+          const timer = window.setTimeout(() => controller.abort(), 12000);
+          const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
+          clearTimeout(timer);
           if (!res.ok) throw new Error("Failed to fetch admin users");
           const body = await res.json();
           return { data: body.users as any[] } as const;
