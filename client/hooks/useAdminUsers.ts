@@ -29,11 +29,15 @@ export function useAdminUsers(): UseAdminUsersReturn {
         throw new Error("Not authenticated");
       }
 
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 12000);
       const res = await fetch("/api/admin/users", {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
+        signal: controller.signal,
       });
+      clearTimeout(timer);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `Request failed (${res.status})`);
