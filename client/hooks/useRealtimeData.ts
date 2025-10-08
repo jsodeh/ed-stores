@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 interface UseRealtimeDataOptions<T> {
   table: string;
@@ -20,11 +20,11 @@ interface UseRealtimeDataReturn<T> {
 
 export function useRealtimeData<T = any>({
   table,
-  select = '*',
+  select = "*",
   filter = {},
   orderBy,
   initialData = [],
-  enabled = true
+  enabled = true,
 }: UseRealtimeDataOptions<T>): UseRealtimeDataReturn<T> {
   const [data, setData] = useState<T[]>(initialData);
   const [loading, setLoading] = useState(true);
@@ -61,8 +61,10 @@ export function useRealtimeData<T = any>({
       // 12s safety timeout
       timeoutId = window.setTimeout(() => {
         if (loadingRef.current) {
-          console.warn(`Timeout fetching ${tableRef.current}. Showing fallback error.`);
-          setError(new Error('Request timeout. Please try again.'));
+          console.warn(
+            `Timeout fetching ${tableRef.current}. Showing fallback error.`,
+          );
+          setError(new Error("Request timeout. Please try again."));
           setLoading(false);
           loadingRef.current = false;
         }
@@ -88,7 +90,9 @@ export function useRealtimeData<T = any>({
 
       // Apply ordering
       if (orderByRef.current) {
-        query = query.order(orderByRef.current.column, { ascending: orderByRef.current.ascending ?? true });
+        query = query.order(orderByRef.current.column, {
+          ascending: orderByRef.current.ascending ?? true,
+        });
       }
 
       const { data: fetchedData, error: fetchError } = await query;
@@ -126,10 +130,10 @@ export function useRealtimeData<T = any>({
     const channel = supabase
       .channel(`realtime-${table}-${Date.now()}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
+          event: "*",
+          schema: "public",
           table: table,
         },
         (payload) => {
@@ -139,7 +143,7 @@ export function useRealtimeData<T = any>({
           if (!loadingRef.current) {
             fetchData();
           }
-        }
+        },
       )
       .subscribe();
 
@@ -157,7 +161,7 @@ export function useRealtimeData<T = any>({
     data,
     loading,
     error,
-    refresh
+    refresh,
   };
 }
 
@@ -175,7 +179,7 @@ export function useAdminStats() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
-      const withTimeout = <T,>(p: Promise<T>, ms = 12000): Promise<T> =>
+      const withTimeout = <T>(p: Promise<T>, ms = 12000): Promise<T> =>
         new Promise((resolve) => {
           let done = false;
           const t = window.setTimeout(() => {
@@ -213,7 +217,10 @@ export function useAdminStats() {
           if (!token) return { data: [] } as const;
           const controller = new AbortController();
           const timer = window.setTimeout(() => controller.abort(), 12000);
-          const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
+          const res = await fetch("/api/admin/users", {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          });
           window.clearTimeout(timer);
           if (!res.ok) return { data: [] } as const;
           const body = await res.json();
@@ -226,20 +233,20 @@ export function useAdminStats() {
             .from("order_details")
             .select("*")
             .order("created_at", { ascending: false })
-            .limit(5)
+            .limit(5),
         ),
         withTimeout(
           supabase
             .from("products")
             .select("id, name, stock_quantity, low_stock_threshold")
             .filter("stock_quantity", "lt", "low_stock_threshold")
-            .limit(5)
+            .limit(5),
         ),
         withTimeout(supabase.from("orders").select("status")),
       ]);
 
       const extractData = (result: any) =>
-        result.status === 'fulfilled' ? result.value.data || [] : [];
+        result.status === "fulfilled" ? result.value.data || [] : [];
 
       const adminUsers = extractData(adminUsersResult);
       const products = extractData(productsResult);
@@ -250,10 +257,18 @@ export function useAdminStats() {
 
       const recentUsers = (adminUsers as any[])
         .slice(0, 5)
-        .map(u => ({ id: u.id, full_name: u.full_name, email: u.email, created_at: u.created_at, role: u.role }));
+        .map((u) => ({
+          id: u.id,
+          full_name: u.full_name,
+          email: u.email,
+          created_at: u.created_at,
+          role: u.role,
+        }));
 
-      const totalRevenue = orders.reduce((sum: number, order: any) => 
-        sum + (order.total_amount || 0), 0);
+      const totalRevenue = orders.reduce(
+        (sum: number, order: any) => sum + (order.total_amount || 0),
+        0,
+      );
 
       const ordersByStatus = orderStatuses.reduce((acc: any, order: any) => {
         if (order.status) {
@@ -280,7 +295,7 @@ export function useAdminStats() {
 
       setStats(dashboardStats);
     } catch (err) {
-      console.error('Error fetching admin stats:', err);
+      console.error("Error fetching admin stats:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
@@ -292,27 +307,33 @@ export function useAdminStats() {
 
     // Set up realtime subscriptions for relevant tables
     const channels = [
-      supabase.channel('admin-stats-users').on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_profiles' },
-        () => fetchStats()
-      ),
-      supabase.channel('admin-stats-products').on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
-        () => fetchStats()
-      ),
-      supabase.channel('admin-stats-orders').on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => fetchStats()
-      ),
+      supabase
+        .channel("admin-stats-users")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "user_profiles" },
+          () => fetchStats(),
+        ),
+      supabase
+        .channel("admin-stats-products")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "products" },
+          () => fetchStats(),
+        ),
+      supabase
+        .channel("admin-stats-orders")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "orders" },
+          () => fetchStats(),
+        ),
     ];
 
-    channels.forEach(channel => channel.subscribe());
+    channels.forEach((channel) => channel.subscribe());
 
     return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
+      channels.forEach((channel) => supabase.removeChannel(channel));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -321,6 +342,6 @@ export function useAdminStats() {
     stats,
     loading,
     error,
-    refresh: fetchStats
+    refresh: fetchStats,
   };
 }

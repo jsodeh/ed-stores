@@ -47,7 +47,7 @@ export function useAdminOrders() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
-        () => fetchOrders()
+        () => fetchOrders(),
       )
       .subscribe();
     return () => {

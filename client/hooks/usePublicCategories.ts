@@ -36,7 +36,7 @@ export function usePublicCategories() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "categories" },
-        () => fetchAll()
+        () => fetchAll(),
       )
       .subscribe();
     return () => {

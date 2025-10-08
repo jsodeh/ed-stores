@@ -23,7 +23,7 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
-  
+
   // Profile debugging route
   app.get("/api/profile/:userId", handleGetProfile);
 
@@ -35,11 +35,11 @@ export function createServer() {
 
   // Serve static files - try multiple possible locations
   const possibleStaticPaths = [
-    path.join(__dirname, "../spa"),           // Production build
-    path.join(__dirname, "../dist/spa"),      // Alternative build location
-    path.join(__dirname, "../client"),        // Development fallback
+    path.join(__dirname, "../spa"), // Production build
+    path.join(__dirname, "../dist/spa"), // Alternative build location
+    path.join(__dirname, "../client"), // Development fallback
   ];
-  
+
   let staticPath = null;
   for (const testPath of possibleStaticPaths) {
     if (fs.existsSync(testPath)) {
@@ -48,7 +48,7 @@ export function createServer() {
       break;
     }
   }
-  
+
   if (staticPath) {
     app.use(express.static(staticPath));
   }
@@ -59,14 +59,14 @@ export function createServer() {
     if (req.path.startsWith("/api/")) {
       return next();
     }
-    
+
     // Try multiple possible index.html locations
     const possibleIndexPaths = [
       path.join(__dirname, "../spa/index.html"),
       path.join(__dirname, "../dist/spa/index.html"),
       path.join(__dirname, "../index.html"),
     ];
-    
+
     let indexPath = null;
     for (const testPath of possibleIndexPaths) {
       if (fs.existsSync(testPath)) {
@@ -74,7 +74,7 @@ export function createServer() {
         break;
       }
     }
-    
+
     if (indexPath) {
       console.log(`📄 Serving SPA for route: ${req.path} -> ${indexPath}`);
       res.sendFile(indexPath);

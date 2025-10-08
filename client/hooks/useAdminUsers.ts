@@ -62,7 +62,7 @@ export function useAdminUsers(): UseAdminUsersReturn {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_profiles" },
-        () => fetchUsers()
+        () => fetchUsers(),
       )
       .subscribe();
 

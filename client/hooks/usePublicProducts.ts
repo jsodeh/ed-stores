@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { products as productsApi, publicSupabase, supabase } from "@/lib/supabase";
+import {
+  products as productsApi,
+  publicSupabase,
+  supabase,
+} from "@/lib/supabase";
 import type { Product } from "@shared/database.types";
 
 export function usePublicProducts() {
@@ -33,7 +37,7 @@ export function usePublicProducts() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "products" },
-        () => fetchAll()
+        () => fetchAll(),
       )
       .subscribe();
     return () => {

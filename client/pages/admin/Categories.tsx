@@ -98,7 +98,9 @@ export default function AdminCategories() {
     categoryId: string,
     direction: "up" | "down",
   ) => {
-    const currentIndex = (categories || []).findIndex((c) => c.id === categoryId);
+    const currentIndex = (categories || []).findIndex(
+      (c) => c.id === categoryId,
+    );
     if (currentIndex === -1) return;
 
     const targetIndex =
@@ -135,7 +137,9 @@ export default function AdminCategories() {
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <AlertTriangle className="h-12 w-12 text-red-500" />
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">Error Loading Categories</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Error Loading Categories
+          </h3>
           <p className="text-gray-600 mb-4">{error.message}</p>
           <Button onClick={refresh} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -151,8 +155,12 @@ export default function AdminCategories() {
       {/* Header with Refresh Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categories Management</h1>
-          <p className="text-gray-600">Organize your products with categories</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Categories Management
+          </h1>
+          <p className="text-gray-600">
+            Organize your products with categories
+          </p>
         </div>
         <Button onClick={refresh} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />

@@ -121,7 +121,9 @@ export default function AdminProducts() {
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <AlertTriangle className="h-12 w-12 text-red-500" />
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">Error Loading Products</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Error Loading Products
+          </h3>
           <p className="text-gray-600 mb-4">{error.message}</p>
           <Button onClick={refresh} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -170,7 +172,9 @@ export default function AdminProducts() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Products</p>
-                <p className="text-2xl font-bold">{transformedProducts.length}</p>
+                <p className="text-2xl font-bold">
+                  {transformedProducts.length}
+                </p>
               </div>
               <Package className="h-8 w-8 text-blue-600" />
             </div>

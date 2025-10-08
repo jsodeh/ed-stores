@@ -4,7 +4,7 @@ import { Database } from "@shared/database.types";
 
 const supabase = createClient<Database>(
   process.env.VITE_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
 );
 
 function getBearerToken(authHeader?: string) {
@@ -19,8 +19,10 @@ export const handleAdminOrders: RequestHandler = async (req, res) => {
     const token = getBearerToken(req.headers.authorization);
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-    const { data: authUser, error: authErr } = await supabase.auth.getUser(token);
-    if (authErr || !authUser?.user) return res.status(401).json({ error: "Invalid session" });
+    const { data: authUser, error: authErr } =
+      await supabase.auth.getUser(token);
+    if (authErr || !authUser?.user)
+      return res.status(401).json({ error: "Invalid session" });
 
     const userId = authUser.user.id;
     const { data: callerProfile, error: profileErr } = await supabase
@@ -28,8 +30,9 @@ export const handleAdminOrders: RequestHandler = async (req, res) => {
       .select("role")
       .eq("id", userId)
       .single();
-    if (profileErr || !callerProfile) return res.status(403).json({ error: "Profile not found" });
-    const isAdmin = ["admin","super_admin"].includes(callerProfile.role || "");
+    if (profileErr || !callerProfile)
+      return res.status(403).json({ error: "Profile not found" });
+    const isAdmin = ["admin", "super_admin"].includes(callerProfile.role || "");
     if (!isAdmin) return res.status(403).json({ error: "Forbidden" });
 
     const { data, error } = await supabase

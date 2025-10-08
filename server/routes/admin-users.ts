@@ -4,7 +4,7 @@ import { Database } from "@shared/database.types";
 
 const supabase = createClient<Database>(
   process.env.VITE_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
 );
 
 function getBearerToken(authHeader?: string) {
@@ -22,7 +22,8 @@ export const handleAdminUsers: RequestHandler = async (req, res) => {
     }
 
     // Validate the caller and ensure they are an admin
-    const { data: authUser, error: authErr } = await supabase.auth.getUser(token);
+    const { data: authUser, error: authErr } =
+      await supabase.auth.getUser(token);
     if (authErr || !authUser?.user) {
       return res.status(401).json({ error: "Invalid session" });
     }
