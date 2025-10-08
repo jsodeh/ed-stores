@@ -175,6 +175,32 @@ export function useAdminStats() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
+      const withTimeout = <T,>(p: Promise<T>, ms = 12000): Promise<T> =>
+        new Promise((resolve) => {
+          let done = false;
+          const t = window.setTimeout(() => {
+            if (!done) {
+              done = true;
+              // @ts-expect-error
+              resolve({ data: [] });
+            }
+          }, ms);
+          p.then((v) => {
+            if (!done) {
+              done = true;
+              window.clearTimeout(t);
+              resolve(v);
+            }
+          }).catch(() => {
+            if (!done) {
+              done = true;
+              window.clearTimeout(t);
+              // @ts-expect-error
+              resolve({ data: [] });
+            }
+          });
+        });
+
       const [
         adminUsersResult,
         productsResult,
@@ -188,24 +214,28 @@ export function useAdminStats() {
           const controller = new AbortController();
           const timer = window.setTimeout(() => controller.abort(), 12000);
           const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
-          clearTimeout(timer);
-          if (!res.ok) throw new Error("Failed to fetch admin users");
+          window.clearTimeout(timer);
+          if (!res.ok) return { data: [] } as const;
           const body = await res.json();
           return { data: body.users as any[] } as const;
         })(),
-        supabase.from("products").select("id"),
-        supabase.from("orders").select("total_amount"),
-        supabase
-          .from("order_details")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("products")
-          .select("id, name, stock_quantity, low_stock_threshold")
-          .filter("stock_quantity", "lt", "low_stock_threshold")
-          .limit(5),
-        supabase.from("orders").select("status"),
+        withTimeout(supabase.from("products").select("id")),
+        withTimeout(supabase.from("orders").select("total_amount")),
+        withTimeout(
+          supabase
+            .from("order_details")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(5)
+        ),
+        withTimeout(
+          supabase
+            .from("products")
+            .select("id, name, stock_quantity, low_stock_threshold")
+            .filter("stock_quantity", "lt", "low_stock_threshold")
+            .limit(5)
+        ),
+        withTimeout(supabase.from("orders").select("status")),
       ]);
 
       const extractData = (result: any) =>
