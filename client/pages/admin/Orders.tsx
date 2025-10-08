@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { useAdminOrders } from "@/hooks/useAdminOrders";
 import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { Order } from "@shared/database.types";
 import {
@@ -22,16 +22,7 @@ import {
 
 export default function AdminOrders() {
   const navigate = useNavigate();
-  const { 
-    data: orders, 
-    loading, 
-    error, 
-    refresh 
-  } = useRealtimeData<Order>({
-    table: 'order_details',
-    select: '*',
-    orderBy: { column: 'created_at', ascending: false }
-  });
+  const { orders, loading, error, refresh } = useAdminOrders();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
