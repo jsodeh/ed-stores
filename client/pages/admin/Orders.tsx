@@ -274,6 +274,5 @@ export default function AdminOrders() {
           </CardContent>
         </Card>
       </div>
-    </div>
   );
 }
