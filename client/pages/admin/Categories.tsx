@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
-import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { usePublicCategories } from "@/hooks/usePublicCategories";
 import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { Category } from "@shared/database.types";
 import {
@@ -38,16 +38,7 @@ import {
 } from "lucide-react";
 
 export default function AdminCategories() {
-  const { 
-    data: categories, 
-    loading, 
-    error, 
-    refresh 
-  } = useRealtimeData<Category>({
-    table: 'categories',
-    select: '*',
-    orderBy: { column: 'sort_order', ascending: true }
-  });
+  const { categories, loading, error, refresh } = usePublicCategories();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
