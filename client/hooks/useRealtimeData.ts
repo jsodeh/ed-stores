@@ -208,7 +208,7 @@ export function useAdminStats() {
       }, {});
 
       const dashboardStats = {
-        totalUsers: users.length,
+        totalUsers: adminUsers.length,
         totalProducts: products.length,
         totalOrders: orders.length,
         totalRevenue,
