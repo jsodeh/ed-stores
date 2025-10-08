@@ -26,6 +26,9 @@ export function createServer() {
   // Profile debugging route
   app.get("/api/profile/:userId", handleGetProfile);
 
+  // Admin: list all users
+  app.get("/api/admin/users", handleAdminUsers);
+
   // Serve static files - try multiple possible locations
   const possibleStaticPaths = [
     path.join(__dirname, "../spa"),           // Production build
