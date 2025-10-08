@@ -32,26 +32,42 @@ export function useRealtimeData<T = any>({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const loadingRef = useRef(false);
 
+  // Use refs to store latest values without causing re-renders
+  const tableRef = useRef(table);
+  const selectRef = useRef(select);
+  const filterRef = useRef(filter);
+  const orderByRef = useRef(orderBy);
+  const enabledRef = useRef(enabled);
+
+  // Update refs when props change
+  useEffect(() => {
+    tableRef.current = table;
+    selectRef.current = select;
+    filterRef.current = filter;
+    orderByRef.current = orderBy;
+    enabledRef.current = enabled;
+  }, [table, select, filter, orderBy, enabled]);
+
   const fetchData = useCallback(async () => {
-    if (!enabled || loadingRef.current) return;
-    
+    if (!enabledRef.current || loadingRef.current) return;
+
     loadingRef.current = true;
     setLoading(true);
     setError(null);
 
     try {
-      let query = supabase.from(table).select(select);
+      let query = supabase.from(tableRef.current).select(selectRef.current);
 
       // Apply filters
-      Object.entries(filter).forEach(([key, value]) => {
+      Object.entries(filterRef.current).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           query = query.eq(key, value);
         }
       });
 
       // Apply ordering
-      if (orderBy) {
-        query = query.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+      if (orderByRef.current) {
+        query = query.order(orderByRef.current.column, { ascending: orderByRef.current.ascending ?? true });
       }
 
       const { data: fetchedData, error: fetchError } = await query;
@@ -62,21 +78,24 @@ export function useRealtimeData<T = any>({
 
       setData(fetchedData || []);
     } catch (err) {
-      console.error(`Error fetching ${table}:`, err);
+      console.error(`Error fetching ${tableRef.current}:`, err);
       setError(err instanceof Error ? err : new Error(String(err)));
       setData([]);
     } finally {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [table, select, filter, orderBy, enabled]);
+  }, []);
 
   const refresh = useCallback(async () => {
     await fetchData();
   }, [fetchData]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
 
     // Initial fetch
     fetchData();
@@ -110,8 +129,7 @@ export function useRealtimeData<T = any>({
         channelRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, table]);
+  }, [enabled, table, fetchData]);
 
   return {
     data,
