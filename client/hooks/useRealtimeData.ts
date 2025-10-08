@@ -150,16 +150,24 @@ export function useAdminStats() {
     setError(null);
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
       const [
-        usersResult,
+        adminUsersResult,
         productsResult,
         ordersResult,
         recentOrdersResult,
         lowStockResult,
-        recentUsersResult,
         orderStatsResult,
       ] = await Promise.allSettled([
-        supabase.from("user_profiles").select("id").eq("role", "customer"),
+        (async () => {
+          if (!token) throw new Error("Missing auth token");
+          const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
+          if (!res.ok) throw new Error("Failed to fetch admin users");
+          const body = await res.json();
+          return { data: body.users as any[] } as const;
+        })(),
         supabase.from("products").select("id"),
         supabase.from("orders").select("total_amount"),
         supabase
@@ -171,11 +179,6 @@ export function useAdminStats() {
           .from("products")
           .select("id, name, stock_quantity, low_stock_threshold")
           .filter("stock_quantity", "lt", "low_stock_threshold")
-          .limit(5),
-        supabase
-          .from("user_profiles")
-          .select("id, full_name, email, created_at, role")
-          .order("created_at", { ascending: false })
           .limit(5),
         supabase.from("orders").select("status"),
       ]);
