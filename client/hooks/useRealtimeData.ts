@@ -83,7 +83,7 @@ export function useRealtimeData<T = any>({
 
     // Set up realtime subscription
     const channel = supabase
-      .channel(`realtime-${table}`)
+      .channel(`realtime-${table}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -93,9 +93,11 @@ export function useRealtimeData<T = any>({
         },
         (payload) => {
           console.log(`Realtime update for ${table}:`, payload);
-          
+
           // Refresh data on any change
-          fetchData();
+          if (!loadingRef.current) {
+            fetchData();
+          }
         }
       )
       .subscribe();
@@ -108,7 +110,8 @@ export function useRealtimeData<T = any>({
         channelRef.current = null;
       }
     };
-  }, [fetchData, enabled, table]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, table]);
 
   return {
     data,
@@ -213,17 +216,17 @@ export function useAdminStats() {
       supabase.channel('admin-stats-users').on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_profiles' },
-        fetchStats
+        () => fetchStats()
       ),
       supabase.channel('admin-stats-products').on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'products' },
-        fetchStats
+        () => fetchStats()
       ),
       supabase.channel('admin-stats-orders').on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
-        fetchStats
+        () => fetchStats()
       ),
     ];
 
@@ -232,7 +235,8 @@ export function useAdminStats() {
     return () => {
       channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, [fetchStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     stats,

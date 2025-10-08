@@ -126,7 +126,8 @@ export function useAdminCache<T>(
     if (enabled && !data) {
       fetchData();
     }
-  }, [enabled, data, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
 
   // Invalidate cache when dependencies change
   useEffect(() => {
@@ -134,6 +135,7 @@ export function useAdminCache<T>(
       invalidate();
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 
   return {
