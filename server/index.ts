@@ -5,6 +5,7 @@ import path from "path";
 import { handleDemo } from "./routes/demo";
 import { handleGetProfile } from "./routes/profile";
 import { handleAdminUsers } from "./routes/admin-users";
+import { handleAdminOrders } from "./routes/admin-orders";
 import fs from "fs";
 
 export function createServer() {
