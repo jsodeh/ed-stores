@@ -183,16 +183,19 @@ export function useAdminStats() {
         supabase.from("orders").select("status"),
       ]);
 
-      const extractData = (result: any) => 
+      const extractData = (result: any) =>
         result.status === 'fulfilled' ? result.value.data || [] : [];
 
-      const users = extractData(usersResult);
+      const adminUsers = extractData(adminUsersResult);
       const products = extractData(productsResult);
       const orders = extractData(ordersResult);
       const recentOrders = extractData(recentOrdersResult);
       const lowStockProducts = extractData(lowStockResult);
-      const recentUsers = extractData(recentUsersResult);
       const orderStatuses = extractData(orderStatsResult);
+
+      const recentUsers = (adminUsers as any[])
+        .slice(0, 5)
+        .map(u => ({ id: u.id, full_name: u.full_name, email: u.email, created_at: u.created_at, role: u.role }));
 
       const totalRevenue = orders.reduce((sum: number, order: any) => 
         sum + (order.total_amount || 0), 0);
