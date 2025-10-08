@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { Category } from "@shared/database.types";
 import {
   Plus,
@@ -31,11 +33,22 @@ import {
   Eye,
   ArrowUp,
   ArrowDown,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function AdminCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    data: categories, 
+    loading, 
+    error, 
+    refresh 
+  } = useRealtimeData<Category>({
+    table: 'categories',
+    select: '*',
+    orderBy: { column: 'sort_order', ascending: true }
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -43,58 +56,13 @@ export default function AdminCategories() {
     null,
   );
 
-  const loadingRef = useRef(false);
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  const loadCategories = async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    console.log("📂 Categories: Loading categories...");
-
-    const timeoutId = setTimeout(() => {
-      console.warn(
-        "⏰ Categories: Loading timeout reached, forcing completion",
-      );
-      setLoading(false);
-      loadingRef.current = false;
-    }, 10000);
-
-    try {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("sort_order", { ascending: true });
-
-      if (error) {
-        console.error("❌ Categories: Error loading categories:", error);
-        throw error;
-      }
-
-      console.log(
-        "✅ Categories: Loaded categories successfully:",
-        data?.length || 0,
-      );
-      setCategories(data || []);
-    } catch (error) {
-      console.error("❌ Categories: Exception loading categories:", error);
-      setCategories([]);
-    } finally {
-      clearTimeout(timeoutId);
-      console.log("🏁 Categories: Setting loading to false");
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  };
-
-  const filteredCategories = categories.filter(
-    (category) =>
-      category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      category.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredCategories = useMemo(() => {
+    return (categories || []).filter(
+      (category) =>
+        category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        category.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [categories, searchQuery]);
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
@@ -115,7 +83,7 @@ export default function AdminCategories() {
         .eq("id", deletingCategory.id);
 
       if (error) throw error;
-      await loadCategories();
+      await refresh();
     } catch (error) {
       console.error("Error deleting category:", error);
       alert("Error deleting category. Please try again.");
@@ -127,7 +95,7 @@ export default function AdminCategories() {
   const handleFormSave = async () => {
     setShowForm(false);
     setEditingCategory(null);
-    await loadCategories();
+    await refresh();
   };
 
   const handleFormCancel = () => {
@@ -139,15 +107,15 @@ export default function AdminCategories() {
     categoryId: string,
     direction: "up" | "down",
   ) => {
-    const currentIndex = categories.findIndex((c) => c.id === categoryId);
+    const currentIndex = (categories || []).findIndex((c) => c.id === categoryId);
     if (currentIndex === -1) return;
 
     const targetIndex =
       direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= categories.length) return;
+    if (targetIndex < 0 || targetIndex >= (categories || []).length) return;
 
-    const currentCategory = categories[currentIndex];
-    const targetCategory = categories[targetIndex];
+    const currentCategory = categories![currentIndex];
+    const targetCategory = categories![targetIndex];
 
     try {
       await Promise.all([
@@ -161,22 +129,46 @@ export default function AdminCategories() {
           .eq("id", targetCategory.id),
       ]);
 
-      await loadCategories();
+      await refresh();
     } catch (error) {
       console.error("Error updating sort order:", error);
     }
   };
 
   if (loading) {
+    return <PageLoadingSpinner text="Loading categories..." />;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">Error Loading Categories</h3>
+          <p className="text-gray-600 mb-4">{error.message}</p>
+          <Button onClick={refresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header with Refresh Button */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Categories Management</h1>
+          <p className="text-gray-600">Organize your products with categories</p>
+        </div>
+        <Button onClick={refresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="relative flex-1 max-w-md">
@@ -207,7 +199,7 @@ export default function AdminCategories() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Categories</p>
-                <p className="text-2xl font-bold">{categories.length}</p>
+                <p className="text-2xl font-bold">{categories?.length || 0}</p>
               </div>
               <Tags className="h-8 w-8 text-blue-600" />
             </div>
@@ -220,7 +212,7 @@ export default function AdminCategories() {
               <div>
                 <p className="text-sm text-gray-600">Active Categories</p>
                 <p className="text-2xl font-bold">
-                  {categories.filter((c) => c.is_active).length}
+                  {categories?.filter((c) => c.is_active).length || 0}
                 </p>
               </div>
               <Eye className="h-8 w-8 text-green-600" />
@@ -234,7 +226,7 @@ export default function AdminCategories() {
               <div>
                 <p className="text-sm text-gray-600">Inactive Categories</p>
                 <p className="text-2xl font-bold">
-                  {categories.filter((c) => !c.is_active).length}
+                  {categories?.filter((c) => !c.is_active).length || 0}
                 </p>
               </div>
               <Tags className="h-8 w-8 text-gray-600" />
@@ -276,7 +268,7 @@ export default function AdminCategories() {
                             className="w-6 h-6 p-0"
                             onClick={() => updateSortOrder(category.id!, "up")}
                             disabled={
-                              categories.findIndex(
+                              (categories || []).findIndex(
                                 (c) => c.id === category.id,
                               ) === 0
                             }
@@ -291,10 +283,10 @@ export default function AdminCategories() {
                               updateSortOrder(category.id!, "down")
                             }
                             disabled={
-                              categories.findIndex(
+                              (categories || []).findIndex(
                                 (c) => c.id === category.id,
                               ) ===
-                              categories.length - 1
+                              (categories || []).length - 1
                             }
                           >
                             <ArrowDown className="h-3 w-3" />

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { UserProfile } from "@shared/database.types";
 import {
   Search,
@@ -11,60 +12,31 @@ import {
   UserCheck,
   Shield,
   Edit,
-  Ban
+  Ban,
+  RefreshCw,
+  AlertTriangle
 } from "lucide-react";
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    data: users, 
+    loading, 
+    error, 
+    refresh 
+  } = useRealtimeData<UserProfile>({
+    table: 'user_profiles',
+    select: '*',
+    orderBy: { column: 'created_at', ascending: false }
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
 
-  const loadingRef = useRef(false);
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    console.log('👥 Users: Loading users...');
-
-    const timeoutId = setTimeout(() => {
-      console.warn('⏰ Users: Loading timeout reached, forcing completion');
-      setLoading(false);
-      loadingRef.current = false;
-    }, 10000);
-
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Users: Error loading users:', error);
-        throw error;
-      }
-      
-      console.log('✅ Users: Loaded users:', data?.length || 0);
-      setUsers(data || []);
-    } catch (error) {
-      console.error('❌ Users: Exception loading users:', error);
-      setUsers([]); // Set empty array on error
-    } finally {
-      clearTimeout(timeoutId);
-      console.log('🏁 Users: Setting loading to false');
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  };
-
-  const filteredUsers = users.filter(user =>
-    user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    return (users || []).filter(user =>
+      user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [users, searchQuery]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -86,68 +58,92 @@ export default function AdminUsers() {
   };
 
   if (loading) {
+    return <PageLoadingSpinner text="Loading users..." />;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">Error Loading Users</h3>
+          <p className="text-gray-600 mb-4">{error.message}</p>
+          <Button onClick={refresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
         </div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+      {/* Header with Refresh Button */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
+          <p className="text-gray-600">Monitor and manage user accounts</p>
         </div>
+        <Button onClick={refresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold">{users.length}</p>
-                </div>
-                <Users className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Customers</p>
-                  <p className="text-2xl font-bold">{users.filter(u => u.role === 'customer').length}</p>
-                </div>
-                <UserCheck className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Admins</p>
-                  <p className="text-2xl font-bold">
-                    {users.filter(u => u.role === 'admin' || u.role === 'super_admin').length}
-                  </p>
-                </div>
-                <Shield className="h-8 w-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Users</p>
+                <p className="text-2xl font-bold">{users?.length || 0}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Customers</p>
+                <p className="text-2xl font-bold">{users?.filter(u => u.role === 'customer').length || 0}</p>
+              </div>
+              <UserCheck className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Admins</p>
+                <p className="text-2xl font-bold">
+                  {users?.filter(u => u.role === 'admin' || u.role === 'super_admin').length || 0}
+                </p>
+              </div>
+              <Shield className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
         {/* Users Table */}
         <Card>

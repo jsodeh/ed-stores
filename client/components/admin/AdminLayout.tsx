@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { AuthGuard, useAuth } from "@/contexts/AuthContext";
+import { AdminDataProvider, useAdminData } from "@/contexts/AdminDataContext";
 import {
   BarChart3,
   Package,
@@ -25,6 +26,8 @@ import {
   X,
   Home,
   Bell,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -80,8 +83,9 @@ interface AdminLayoutProps {
   title?: string;
 }
 
-export function AdminLayout({ title, children }: AdminLayoutProps) {
+function AdminLayoutInner({ title, children }: AdminLayoutProps) {
   const { profile, signOut } = useAuth();
+  const { isOnline } = useAdminData();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -105,9 +109,8 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
   const currentPath = location.pathname;
 
   return (
-    <AuthGuard requireAuth requireAdmin>
-      <AdminLayoutContext.Provider value={{ setPageTitle }}>
-        <div className="min-h-screen bg-gray-50 flex">
+    <AdminLayoutContext.Provider value={{ setPageTitle }}>
+      <div className="min-h-screen bg-gray-50 flex">
           {/* Sidebar */}
           <div
             className={`
@@ -215,13 +218,22 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Badge variant="outline">ED Superstore Admin</Badge>
+                  <div className="flex items-center gap-2">
+                    {isOnline ? (
+                      <Wifi className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <WifiOff className="h-4 w-4 text-red-600" />
+                    )}
+                    <Badge variant="outline">
+                      ED Superstore Admin {!isOnline && '(Offline)'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             </header>
 
             {/* Page content */}
-            <main className="p-4 lg:p-6">{children ?? <Outlet />}</main>
+            <main className="flex-1 p-4 lg:p-6 overflow-auto">{children ?? <Outlet />}</main>
           </div>
 
           {/* Overlay for mobile */}
@@ -233,6 +245,17 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
           )}
         </div>
       </AdminLayoutContext.Provider>
+  );
+}
+
+export function AdminLayout({ title, children }: AdminLayoutProps) {
+  return (
+    <AuthGuard requireAuth requireAdmin>
+      <AdminDataProvider>
+        <AdminLayoutInner title={title}>
+          {children}
+        </AdminLayoutInner>
+      </AdminDataProvider>
     </AuthGuard>
   );
 }

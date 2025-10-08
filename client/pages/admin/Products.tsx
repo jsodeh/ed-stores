@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { Product } from "@shared/database.types";
 import {
   Plus,
@@ -30,90 +32,58 @@ import {
   Package,
   Eye,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    data: products, 
+    loading, 
+    error, 
+    refresh 
+  } = useRealtimeData<Product>({
+    table: 'products',
+    select: `
+      *,
+      categories:category_id (
+        id,
+        name,
+        slug,
+        color
+      )
+    `,
+    orderBy: { column: 'created_at', ascending: false }
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
-  const loadingRef = useRef(false);
+  // Transform and filter products
+  const transformedProducts = useMemo(() => {
+    const timestamp = Date.now();
+    return (products || []).map((product: any) => ({
+      ...product,
+      category_name: product.categories?.name || null,
+      category_slug: product.categories?.slug || null,
+      category_color: product.categories?.color || null,
+      average_rating: 0,
+      review_count: 0,
+      category_id: product.category_id || product.categories?.id || null,
+      image_url: product.image_url
+        ? `${product.image_url}?t=${timestamp}`
+        : product.image_url,
+    }));
+  }, [products]);
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const loadProducts = async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    console.log("📦 Products: Loading products...");
-
-    const timeoutId = setTimeout(() => {
-      console.warn("⏰ Products: Loading timeout reached, forcing completion");
-      setLoading(false);
-      loadingRef.current = false;
-    }, 10000);
-
-    try {
-      const timestamp = Date.now();
-      const { data, error } = await supabase
-        .from("products")
-        .select(
-          `
-          *,
-          categories:category_id (
-            id,
-            name,
-            slug,
-            color
-          )
-        `,
-        )
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("❌ Products: Error loading products:", error);
-        throw error;
-      }
-
-      const transformedData = (data || []).map((product) => ({
-        ...product,
-        category_name: product.categories?.name || null,
-        category_slug: product.categories?.slug || null,
-        category_color: product.categories?.color || null,
-        average_rating: 0,
-        review_count: 0,
-        category_id: product.category_id || product.categories?.id || null,
-        image_url: product.image_url
-          ? `${product.image_url}?t=${timestamp}`
-          : product.image_url,
-      }));
-
-      console.log(
-        "✅ Products: Loaded products successfully:",
-        transformedData.length,
-      );
-      setProducts(transformedData);
-    } catch (error) {
-      console.error("❌ Products: Exception loading products:", error);
-      setProducts([]);
-    } finally {
-      clearTimeout(timeoutId);
-      console.log("🏁 Products: Setting loading to false");
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  };
-
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredProducts = useMemo(() => {
+    return transformedProducts.filter(
+      (product) =>
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.sku?.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [transformedProducts, searchQuery]);
 
   const formatPrice = (price: number) => {
     return `₦${price.toLocaleString()}.00`;
@@ -138,7 +108,7 @@ export default function AdminProducts() {
         .eq("id", deletingProduct.id);
 
       if (error) throw error;
-      await loadProducts();
+      await refresh();
     } catch (error) {
       console.error("Error deleting product:", error);
       alert("Error deleting product. Please try again.");
@@ -150,12 +120,8 @@ export default function AdminProducts() {
   const handleFormSave = async () => {
     setShowForm(false);
     setEditingProduct(null);
-    // Force a fresh reload of products to ensure updated images are shown
-    await loadProducts();
-    // Also trigger a small delay to ensure any caching is cleared
-    setTimeout(() => {
-      loadProducts();
-    }, 1000);
+    // Refresh data to get latest changes
+    await refresh();
   };
 
   const handleFormCancel = () => {
@@ -164,9 +130,21 @@ export default function AdminProducts() {
   };
 
   if (loading) {
+    return <PageLoadingSpinner text="Loading products..." />;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">Error Loading Products</h3>
+          <p className="text-gray-600 mb-4">{error.message}</p>
+          <Button onClick={refresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
@@ -185,12 +163,9 @@ export default function AdminProducts() {
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadProducts} disabled={loading}>
-            {loading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-            ) : (
-              "Refresh"
-            )}
+          <Button variant="outline" onClick={refresh} disabled={loading}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
           </Button>
           <Button
             onClick={() => {
@@ -212,7 +187,7 @@ export default function AdminProducts() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Products</p>
-                <p className="text-2xl font-bold">{products.length}</p>
+                <p className="text-2xl font-bold">{transformedProducts.length}</p>
               </div>
               <Package className="h-8 w-8 text-blue-600" />
             </div>
@@ -225,7 +200,7 @@ export default function AdminProducts() {
               <div>
                 <p className="text-sm text-gray-600">Active Products</p>
                 <p className="text-2xl font-bold">
-                  {products.filter((p) => p.is_active).length}
+                  {transformedProducts.filter((p) => p.is_active).length}
                 </p>
               </div>
               <Eye className="h-8 w-8 text-green-600" />
@@ -240,7 +215,7 @@ export default function AdminProducts() {
                 <p className="text-sm text-gray-600">Low Stock</p>
                 <p className="text-2xl font-bold">
                   {
-                    products.filter(
+                    transformedProducts.filter(
                       (p) =>
                         (p.stock_quantity || 0) < (p.low_stock_threshold || 10),
                     ).length

@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { Order } from "@shared/database.types";
 import {
   Search,
@@ -15,64 +15,39 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Edit
+  Edit,
+  RefreshCw,
+  AlertTriangle
 } from "lucide-react";
 
 export default function AdminOrders() {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    data: orders, 
+    loading, 
+    error, 
+    refresh 
+  } = useRealtimeData<Order>({
+    table: 'order_details',
+    select: '*',
+    orderBy: { column: 'created_at', ascending: false }
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  const loadOrders = async () => {
-    setLoading(true);
-    console.log('📋 Orders: Loading orders...');
-    
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.warn('⏰ Orders: Loading timeout reached, forcing completion');
-      setLoading(false);
-      setOrders([]);
-    }, 10000);
-    
-    try {
-      const { data, error } = await supabase
-        .from('order_details')
-        .select('*')
-        .order('created_at', { ascending: false });
+  const filteredOrders = useMemo(() => {
+    return (orders || []).filter(order => {
+      const matchesSearch = 
+        order.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer_email?.toLowerCase().includes(searchQuery.toLowerCase());
       
-      if (error) {
-        console.error('❌ Orders: Error loading orders:', error);
-        throw error;
-      }
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       
-      console.log('✅ Orders: Loaded orders successfully:', data?.length || 0);
-      setOrders(data || []);
-    } catch (error) {
-      console.error('❌ Orders: Exception loading orders:', error);
-      setOrders([]); // Set empty array on error
-    } finally {
-      clearTimeout(timeoutId);
-      console.log('🏁 Orders: Setting loading to false');
-      setLoading(false);
-    }
-  };
-
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer_email?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, searchQuery, statusFilter]);
 
   const formatPrice = (price: number) => {
     return `₦${price.toLocaleString()}.00`;
@@ -119,27 +94,47 @@ export default function AdminOrders() {
     }
   };
 
-  const orderStats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    processing: orders.filter(o => o.status === 'processing').length,
-    delivered: orders.filter(o => o.status === 'delivered').length,
-    cancelled: orders.filter(o => o.status === 'cancelled').length,
-  };
+  const orderStats = useMemo(() => ({
+    total: orders?.length || 0,
+    pending: orders?.filter(o => o.status === 'pending').length || 0,
+    processing: orders?.filter(o => o.status === 'processing').length || 0,
+    delivered: orders?.filter(o => o.status === 'delivered').length || 0,
+    cancelled: orders?.filter(o => o.status === 'cancelled').length || 0,
+  }), [orders]);
 
   if (loading) {
+    return <PageLoadingSpinner text="Loading orders..." />;
+  }
+
+  if (error) {
     return (
-      <AdminPage title="Orders Management">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">Error Loading Orders</h3>
+          <p className="text-gray-600 mb-4">{error.message}</p>
+          <Button onClick={refresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
         </div>
-      </AdminPage>
+      </div>
     );
   }
 
   return (
-    <AdminPage title="Orders Management">
-      <div className="space-y-6">
+    <div className="space-y-6">
+      {/* Header with Refresh Button */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Orders Management</h1>
+          <p className="text-gray-600">Monitor and manage customer orders in real-time</p>
+        </div>
+        <Button onClick={refresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="flex gap-4">
@@ -279,6 +274,6 @@ export default function AdminOrders() {
           </CardContent>
         </Card>
       </div>
-    </AdminPage>
+    </div>
   );
 }

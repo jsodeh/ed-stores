@@ -32,10 +32,10 @@ async function checkRLSPolicies() {
     if (policiesError) {
       console.log('⚠️  Could not retrieve all policies directly');
       console.log('   Trying alternative method...\n');
-      
+
       // Alternative method: Check specific tables
       const tables = ['user_profiles', 'products', 'orders', 'cart_items', 'categories'];
-      
+
       for (const table of tables) {
         console.log(`Checking policies for ${table}...`);
         try {
@@ -43,7 +43,7 @@ async function checkRLSPolicies() {
             .from(table)
             .select('*')
             .limit(1);
-            
+
           if (error) {
             console.log(`   ${table}: ${error.message}`);
           } else {
@@ -55,35 +55,35 @@ async function checkRLSPolicies() {
       }
     } else {
       console.log(`✅ Found ${allPolicies.length} policies in database`);
-      
+
       // Filter policies by table
       const userProfilePolicies = allPolicies.filter(p => p.tablename === 'user_profiles');
       const productsPolicies = allPolicies.filter(p => p.tablename === 'products');
       const ordersPolicies = allPolicies.filter(p => p.tablename === 'orders');
       const cartItemsPolicies = allPolicies.filter(p => p.tablename === 'cart_items');
-      
+
       console.log(`\n📋 User Profiles Policies (${userProfilePolicies.length}):`);
       userProfilePolicies.forEach(policy => {
         console.log(`   - ${policy.policyname}: ${policy.cmd} for ${policy.roles}`);
         console.log(`     Qualifier: ${policy.qual || 'None'}`);
       });
-      
+
       console.log(`\n📦 Products Policies (${productsPolicies.length}):`);
       productsPolicies.forEach(policy => {
         console.log(`   - ${policy.policyname}: ${policy.cmd} for ${policy.roles}`);
       });
-      
+
       console.log(`\n🛒 Cart Items Policies (${cartItemsPolicies.length}):`);
       cartItemsPolicies.forEach(policy => {
         console.log(`   - ${policy.policyname}: ${policy.cmd} for ${policy.roles}`);
       });
-      
+
       console.log(`\n📦 Orders Policies (${ordersPolicies.length}):`);
       ordersPolicies.forEach(policy => {
         console.log(`   - ${policy.policyname}: ${policy.cmd} for ${policy.roles}`);
       });
     }
-    
+
     console.log('\n2. Checking user role access...');
     // Test specific admin operations
     const testOperations = [
@@ -93,12 +93,12 @@ async function checkRLSPolicies() {
       { table: 'orders', operation: 'SELECT', description: 'Read orders' },
       { table: 'cart_items', operation: 'SELECT', description: 'Read cart items' }
     ];
-    
+
     console.log('\n🧪 Testing specific operations:');
     for (const op of testOperations) {
       console.log(`   ${op.description} (${op.table} ${op.operation})`);
     }
-    
+
     console.log('\n✅ RLS policy check completed');
     console.log('💡 Your super_admin role should grant access to all tables');
 

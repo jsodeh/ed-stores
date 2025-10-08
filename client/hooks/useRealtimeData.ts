@@ -1,0 +1,243 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
+
+interface UseRealtimeDataOptions<T> {
+  table: string;
+  select?: string;
+  filter?: Record<string, any>;
+  orderBy?: { column: string; ascending?: boolean };
+  initialData?: T[];
+  enabled?: boolean;
+}
+
+interface UseRealtimeDataReturn<T> {
+  data: T[];
+  loading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+}
+
+export function useRealtimeData<T = any>({
+  table,
+  select = '*',
+  filter = {},
+  orderBy,
+  initialData = [],
+  enabled = true
+}: UseRealtimeDataOptions<T>): UseRealtimeDataReturn<T> {
+  const [data, setData] = useState<T[]>(initialData);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const loadingRef = useRef(false);
+
+  const fetchData = useCallback(async () => {
+    if (!enabled || loadingRef.current) return;
+    
+    loadingRef.current = true;
+    setLoading(true);
+    setError(null);
+
+    try {
+      let query = supabase.from(table).select(select);
+
+      // Apply filters
+      Object.entries(filter).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          query = query.eq(key, value);
+        }
+      });
+
+      // Apply ordering
+      if (orderBy) {
+        query = query.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+      }
+
+      const { data: fetchedData, error: fetchError } = await query;
+
+      if (fetchError) {
+        throw new Error(fetchError.message);
+      }
+
+      setData(fetchedData || []);
+    } catch (err) {
+      console.error(`Error fetching ${table}:`, err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      setData([]);
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  }, [table, select, filter, orderBy, enabled]);
+
+  const refresh = useCallback(async () => {
+    await fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    // Initial fetch
+    fetchData();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel(`realtime-${table}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: table,
+        },
+        (payload) => {
+          console.log(`Realtime update for ${table}:`, payload);
+          
+          // Refresh data on any change
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [fetchData, enabled, table]);
+
+  return {
+    data,
+    loading,
+    error,
+    refresh
+  };
+}
+
+// Specialized hook for admin dashboard stats
+export function useAdminStats() {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [
+        usersResult,
+        productsResult,
+        ordersResult,
+        recentOrdersResult,
+        lowStockResult,
+        recentUsersResult,
+        orderStatsResult,
+      ] = await Promise.allSettled([
+        supabase.from("user_profiles").select("id").eq("role", "customer"),
+        supabase.from("products").select("id"),
+        supabase.from("orders").select("total_amount"),
+        supabase
+          .from("order_details")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("products")
+          .select("id, name, stock_quantity, low_stock_threshold")
+          .filter("stock_quantity", "lt", "low_stock_threshold")
+          .limit(5),
+        supabase
+          .from("user_profiles")
+          .select("id, full_name, email, created_at, role")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase.from("orders").select("status"),
+      ]);
+
+      const extractData = (result: any) => 
+        result.status === 'fulfilled' ? result.value.data || [] : [];
+
+      const users = extractData(usersResult);
+      const products = extractData(productsResult);
+      const orders = extractData(ordersResult);
+      const recentOrders = extractData(recentOrdersResult);
+      const lowStockProducts = extractData(lowStockResult);
+      const recentUsers = extractData(recentUsersResult);
+      const orderStatuses = extractData(orderStatsResult);
+
+      const totalRevenue = orders.reduce((sum: number, order: any) => 
+        sum + (order.total_amount || 0), 0);
+
+      const ordersByStatus = orderStatuses.reduce((acc: any, order: any) => {
+        if (order.status) {
+          acc[order.status] = (acc[order.status] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      const dashboardStats = {
+        totalUsers: users.length,
+        totalProducts: products.length,
+        totalOrders: orders.length,
+        totalRevenue,
+        recentOrders,
+        lowStockProducts,
+        recentUsers,
+        orderStats: {
+          pending: ordersByStatus?.pending || 0,
+          confirmed: ordersByStatus?.confirmed || 0,
+          delivered: ordersByStatus?.delivered || 0,
+          cancelled: ordersByStatus?.cancelled || 0,
+        },
+      };
+
+      setStats(dashboardStats);
+    } catch (err) {
+      console.error('Error fetching admin stats:', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+
+    // Set up realtime subscriptions for relevant tables
+    const channels = [
+      supabase.channel('admin-stats-users').on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_profiles' },
+        fetchStats
+      ),
+      supabase.channel('admin-stats-products').on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        fetchStats
+      ),
+      supabase.channel('admin-stats-orders').on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        fetchStats
+      ),
+    ];
+
+    channels.forEach(channel => channel.subscribe());
+
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
+  }, [fetchStats]);
+
+  return {
+    stats,
+    loading,
+    error,
+    refresh: fetchStats
+  };
+}
