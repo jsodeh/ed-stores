@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
-import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { usePublicProducts } from "@/hooks/usePublicProducts";
 import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { Product } from "@shared/database.types";
 import {
@@ -36,24 +36,7 @@ import {
 } from "lucide-react";
 
 export default function AdminProducts() {
-  const { 
-    data: products, 
-    loading, 
-    error, 
-    refresh 
-  } = useRealtimeData<Product>({
-    table: 'products',
-    select: `
-      *,
-      categories:category_id (
-        id,
-        name,
-        slug,
-        color
-      )
-    `,
-    orderBy: { column: 'created_at', ascending: false }
-  });
+  const { products, loading, error, refresh } = usePublicProducts();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
