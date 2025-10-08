@@ -55,7 +55,28 @@ export function useRealtimeData<T = any>({
     setLoading(true);
     setError(null);
 
+    // Failsafe: turn off loading if request hangs
+    let timeoutId: number | undefined;
+    const startTimeout = () => {
+      // 12s safety timeout
+      timeoutId = window.setTimeout(() => {
+        if (loadingRef.current) {
+          console.warn(`Timeout fetching ${tableRef.current}. Showing fallback error.`);
+          setError(new Error('Request timeout. Please try again.'));
+          setLoading(false);
+          loadingRef.current = false;
+        }
+      }, 12000);
+    };
+    const clearTimeoutIfAny = () => {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+    };
+
     try {
+      startTimeout();
       let query = supabase.from(tableRef.current).select(selectRef.current);
 
       // Apply filters
