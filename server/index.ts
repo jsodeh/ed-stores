@@ -4,6 +4,7 @@ import cors from "cors";
 import path from "path";
 import { handleDemo } from "./routes/demo";
 import { handleGetProfile } from "./routes/profile";
+import { handleAdminUsers } from "./routes/admin-users";
 import fs from "fs";
 
 export function createServer() {
