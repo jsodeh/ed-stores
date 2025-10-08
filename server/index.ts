@@ -30,6 +30,9 @@ export function createServer() {
   // Admin: list all users
   app.get("/api/admin/users", handleAdminUsers);
 
+  // Admin: list orders (view)
+  app.get("/api/admin/orders", handleAdminOrders);
+
   // Serve static files - try multiple possible locations
   const possibleStaticPaths = [
     path.join(__dirname, "../spa"),           // Production build
