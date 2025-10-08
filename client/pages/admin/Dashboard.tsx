@@ -1,23 +1,188 @@
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAdminStats } from "@/hooks/useRealtimeData";
-import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
+import { supabase } from "@/lib/supabase";
 import {
   BarChart3,
   Users,
   Package,
   ShoppingCart,
+  TrendingUp,
+  TrendingDown,
   DollarSign,
   Eye,
   AlertTriangle,
-  RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+interface DashboardStats {
+  totalUsers: number;
+  totalProducts: number;
+  totalOrders: number;
+  totalRevenue: number;
+  recentOrders: any[];
+  lowStockProducts: any[];
+  recentUsers: any[];
+  orderStats: {
+    pending: number;
+    confirmed: number;
+    delivered: number;
+    cancelled: number;
+  };
+}
+
 export default function AdminDashboard() {
-  const { stats, loading, error, refresh } = useAdminStats();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false); // Track loading state with ref
   const navigate = useNavigate();
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []); // Empty dependency array - only run once on mount
+
+  const loadDashboardData = async () => {
+    // Prevent multiple simultaneous calls using ref
+    if (loadingRef.current) {
+      console.log('📊 Dashboard: Already loading, skipping...');
+      return;
+    }
+    
+    loadingRef.current = true;
+    setLoading(true);
+    
+    // Add timeout protection
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Dashboard: Loading timeout reached, forcing completion');
+      loadingRef.current = false;
+      setLoading(false);
+      setStats({
+        totalUsers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        recentOrders: [],
+        lowStockProducts: [],
+        recentUsers: [],
+        orderStats: { pending: 0, confirmed: 0, delivered: 0, cancelled: 0 }
+      });
+    }, 8000); // 8 second timeout
+    
+    try {
+      console.log('📊 Dashboard: Loading dashboard data...');
+      
+      // Load dashboard data with individual error handling
+      const results = await Promise.allSettled([
+        supabase.from("user_profiles").select("id").eq("role", "customer"),
+        supabase.from("products").select("id"),
+        supabase.from("orders").select("total_amount"),
+        supabase
+          .from("order_details")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("products")
+          .select("id, name, stock_quantity, low_stock_threshold")
+          .filter("stock_quantity", "lt", "low_stock_threshold")
+          .limit(5),
+        supabase
+          .from("user_profiles")
+          .select("id, full_name, email, created_at, role")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase.from("orders").select("status"),
+      ]);
+
+      // Extract results with error handling
+      const queryNames = [
+        'user_profiles (customers)',
+        'products (count)',
+        'orders (revenue)',
+        'order_details (recent)',
+        'products (low stock)',
+        'user_profiles (recent)',
+        'orders (status)'
+      ];
+      
+      const [
+        usersResult,
+        productsResult,
+        ordersResult,
+        recentOrdersResult,
+        lowStockResult,
+        recentUsersResult,
+        orderStatsResult,
+      ] = results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          console.log(`✅ Dashboard: ${queryNames[index]} successful:`, result.value.data?.length || 0, 'items');
+          return result.value;
+        } else {
+          console.error(`❌ Dashboard: ${queryNames[index]} failed:`, result.reason);
+          return { data: [], error: result.reason };
+        }
+      });
+
+      // Calculate stats with safe fallbacks
+      const totalUsers = usersResult.data?.length || 0;
+      const totalProducts = productsResult.data?.length || 0;
+      const totalOrders = ordersResult.data?.length || 0;
+      const totalRevenue =
+        ordersResult.data?.reduce(
+          (sum, order) => sum + (order.total_amount || 0),
+          0,
+        ) || 0;
+
+      // Order stats by status with safe handling
+      const ordersByStatus = orderStatsResult.data?.reduce(
+        (acc: any, order) => {
+          if (order.status) {
+            acc[order.status] = (acc[order.status] || 0) + 1;
+          }
+          return acc;
+        },
+        {},
+      ) || {};
+
+      const dashboardStats: DashboardStats = {
+        totalUsers,
+        totalProducts,
+        totalOrders,
+        totalRevenue,
+        recentOrders: recentOrdersResult.data || [],
+        lowStockProducts: lowStockResult.data || [],
+        recentUsers: recentUsersResult.data || [],
+        orderStats: {
+          pending: ordersByStatus?.pending || 0,
+          confirmed: ordersByStatus?.confirmed || 0,
+          delivered: ordersByStatus?.delivered || 0,
+          cancelled: ordersByStatus?.cancelled || 0,
+        },
+      };
+
+      console.log('📊 Dashboard: Stats calculated:', dashboardStats);
+      setStats(dashboardStats);
+    } catch (error) {
+      console.error("❌ Dashboard: Error loading dashboard data:", error);
+      // Set empty stats on error to prevent infinite loading
+      setStats({
+        totalUsers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        recentOrders: [],
+        lowStockProducts: [],
+        recentUsers: [],
+        orderStats: { pending: 0, confirmed: 0, delivered: 0, cancelled: 0 }
+      });
+    } finally {
+      clearTimeout(timeoutId); // Clear the timeout
+      loadingRef.current = false; // Reset loading ref
+      console.log('🏁 Dashboard: Setting loading to false');
+      setLoading(false);
+    }
+  };
 
   const formatPrice = (price: number) => {
     return `₦${price.toLocaleString()}.00`;
@@ -32,40 +197,16 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return <PageLoadingSpinner text="Loading dashboard..." />;
-  }
-
-  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <AlertTriangle className="h-12 w-12 text-red-500" />
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">Error Loading Dashboard</h3>
-          <p className="text-gray-600 mb-4">{error.message}</p>
-          <Button onClick={refresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
+      <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Refresh Button */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-          <p className="text-gray-600">Real-time insights into your store performance</p>
-        </div>
-        <Button onClick={refresh} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardContent className="p-6">

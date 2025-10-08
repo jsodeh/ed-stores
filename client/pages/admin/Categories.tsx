@@ -1,15 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,8 +16,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
-import { usePublicCategories } from "@/hooks/usePublicCategories";
-import { PageLoadingSpinner } from "@/components/admin/LoadingSpinner";
 import { Category } from "@shared/database.types";
 import {
   Plus,
@@ -33,13 +26,11 @@ import {
   Eye,
   ArrowUp,
   ArrowDown,
-  RefreshCw,
-  AlertTriangle,
 } from "lucide-react";
 
 export default function AdminCategories() {
-  const { categories, loading, error, refresh } = usePublicCategories();
-
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -47,13 +38,78 @@ export default function AdminCategories() {
     null,
   );
 
-  const filteredCategories = useMemo(() => {
-    return (categories || []).filter(
-      (category) =>
-        category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        category.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-  }, [categories, searchQuery]);
+  const loadingRef = useRef(false);
+
+  useEffect(() => {
+    loadCategories();
+
+    // Set up real-time subscription for categories
+    const categoriesSubscription = supabase
+      .channel('admin-categories-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categories'
+        },
+        (payload) => {
+          console.log('🔄 Categories: Real-time update received:', payload);
+          // Only reload if we're not already loading
+          if (!loadingRef.current) {
+            loadCategories();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🧹 Categories: Unsubscribing from real-time updates');
+      categoriesSubscription.unsubscribe();
+    };
+  }, []);
+
+  const loadCategories = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    console.log('📂 Categories: Loading categories...');
+
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Categories: Loading timeout reached, forcing completion');
+      setLoading(false);
+      loadingRef.current = false;
+    }, 10000);
+
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.error('❌ Categories: Error loading categories:', error);
+        throw error;
+      }
+
+      console.log('✅ Categories: Loaded categories successfully:', data?.length || 0);
+      setCategories(data || []);
+    } catch (error) {
+      console.error('❌ Categories: Exception loading categories:', error);
+      setCategories([]);
+    } finally {
+      clearTimeout(timeoutId);
+      console.log('🏁 Categories: Setting loading to false');
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  };
+
+  const filteredCategories = categories.filter(
+    (category) =>
+      category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
@@ -74,7 +130,7 @@ export default function AdminCategories() {
         .eq("id", deletingCategory.id);
 
       if (error) throw error;
-      await refresh();
+      await loadCategories();
     } catch (error) {
       console.error("Error deleting category:", error);
       alert("Error deleting category. Please try again.");
@@ -86,7 +142,7 @@ export default function AdminCategories() {
   const handleFormSave = async () => {
     setShowForm(false);
     setEditingCategory(null);
-    await refresh();
+    await loadCategories();
   };
 
   const handleFormCancel = () => {
@@ -98,17 +154,15 @@ export default function AdminCategories() {
     categoryId: string,
     direction: "up" | "down",
   ) => {
-    const currentIndex = (categories || []).findIndex(
-      (c) => c.id === categoryId,
-    );
+    const currentIndex = categories.findIndex((c) => c.id === categoryId);
     if (currentIndex === -1) return;
 
     const targetIndex =
       direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= (categories || []).length) return;
+    if (targetIndex < 0 || targetIndex >= categories.length) return;
 
-    const currentCategory = categories![currentIndex];
-    const targetCategory = categories![targetIndex];
+    const currentCategory = categories[currentIndex];
+    const targetCategory = categories[targetIndex];
 
     try {
       await Promise.all([
@@ -122,244 +176,213 @@ export default function AdminCategories() {
           .eq("id", targetCategory.id),
       ]);
 
-      await refresh();
+      await loadCategories();
     } catch (error) {
       console.error("Error updating sort order:", error);
     }
   };
 
   if (loading) {
-    return <PageLoadingSpinner text="Loading categories..." />;
-  }
-
-  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <AlertTriangle className="h-12 w-12 text-red-500" />
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Error Loading Categories
-          </h3>
-          <p className="text-gray-600 mb-4">{error.message}</p>
-          <Button onClick={refresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Refresh Button */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Categories Management
-          </h1>
-          <p className="text-gray-600">
-            Organize your products with categories
-          </p>
-        </div>
-        <Button onClick={refresh} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search categories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Button
-          onClick={() => {
-            setEditingCategory(null);
-            setShowForm(true);
-          }}
-          className="bg-primary hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Category
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Categories</p>
-                <p className="text-2xl font-bold">{categories?.length || 0}</p>
-              </div>
-              <Tags className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Active Categories</p>
-                <p className="text-2xl font-bold">
-                  {categories?.filter((c) => c.is_active).length || 0}
-                </p>
-              </div>
-              <Eye className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Inactive Categories</p>
-                <p className="text-2xl font-bold">
-                  {categories?.filter((c) => !c.is_active).length || 0}
-                </p>
-              </div>
-              <Tags className="h-8 w-8 text-gray-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Categories Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Categories ({filteredCategories.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Order</th>
-                  <th className="text-left p-2">Category</th>
-                  <th className="text-left p-2">Slug</th>
-                  <th className="text-left p-2">Description</th>
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-left p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCategories.map((category) => (
-                  <tr key={category.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">
-                          {category.sort_order}
-                        </span>
-                        <div className="flex flex-col gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-6 h-6 p-0"
-                            onClick={() => updateSortOrder(category.id!, "up")}
-                            disabled={
-                              (categories || []).findIndex(
-                                (c) => c.id === category.id,
-                              ) === 0
-                            }
-                          >
-                            <ArrowUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-6 h-6 p-0"
-                            onClick={() =>
-                              updateSortOrder(category.id!, "down")
-                            }
-                            disabled={
-                              (categories || []).findIndex(
-                                (c) => c.id === category.id,
-                              ) ===
-                              (categories || []).length - 1
-                            }
-                          >
-                            <ArrowDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                          style={{
-                            backgroundColor: category.color || "#F59E0B",
-                          }}
-                        >
-                          {category.name?.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-medium">{category.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {category.icon}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                        {category.slug}
-                      </span>
-                    </td>
-                    <td className="p-2">
-                      <span className="text-sm text-gray-600">
-                        {category.description || "No description"}
-                      </span>
-                    </td>
-                    <td className="p-2">
-                      <Badge
-                        variant={category.is_active ? "default" : "secondary"}
-                      >
-                        {category.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </td>
-                    <td className="p-2">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(category)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(category)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Button
+            onClick={() => {
+              setEditingCategory(null);
+              setShowForm(true);
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Categories</p>
+                  <p className="text-2xl font-bold">{categories.length}</p>
+                </div>
+                <Tags className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Active Categories</p>
+                  <p className="text-2xl font-bold">
+                    {categories.filter((c) => c.is_active).length}
+                  </p>
+                </div>
+                <Eye className="h-8 w-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Inactive Categories</p>
+                  <p className="text-2xl font-bold">
+                    {categories.filter((c) => !c.is_active).length}
+                  </p>
+                </div>
+                <Tags className="h-8 w-8 text-gray-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Categories Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Categories ({filteredCategories.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Order</th>
+                    <th className="text-left p-2">Category</th>
+                    <th className="text-left p-2">Slug</th>
+                    <th className="text-left p-2">Description</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCategories.map((category) => (
+                    <tr key={category.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm">
+                            {category.sort_order}
+                          </span>
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-6 h-6 p-0"
+                              onClick={() =>
+                                updateSortOrder(category.id!, "up")
+                              }
+                              disabled={
+                                categories.findIndex(
+                                  (c) => c.id === category.id,
+                                ) === 0
+                              }
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-6 h-6 p-0"
+                              onClick={() =>
+                                updateSortOrder(category.id!, "down")
+                              }
+                              disabled={
+                                categories.findIndex(
+                                  (c) => c.id === category.id,
+                                ) ===
+                                categories.length - 1
+                              }
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                            style={{
+                              backgroundColor: category.color || "#F59E0B",
+                            }}
+                          >
+                            {category.name?.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium">{category.name}</p>
+                            <p className="text-sm text-gray-600">
+                              {category.icon}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          {category.slug}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <span className="text-sm text-gray-600">
+                          {category.description || "No description"}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <Badge
+                          variant={category.is_active ? "default" : "secondary"}
+                        >
+                          {category.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(category)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(category)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
 
       {/* Category Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Category Form</DialogTitle>
-          </DialogHeader>
           <CategoryForm
             category={editingCategory || undefined}
             onSave={handleFormSave}

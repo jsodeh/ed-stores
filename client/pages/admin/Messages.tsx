@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,12 +44,40 @@ export default function AdminMessages() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [replyText, setReplyText] = useState("");
   const [filterType, setFilterType] = useState<string>('all');
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     loadMessages();
+
+    // Set up real-time subscription for messages
+    const messagesSubscription = supabase
+      .channel('admin-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          console.log('🔄 Messages: Real-time update received:', payload);
+          // Only reload if we're not already loading
+          if (!loadingRef.current) {
+            loadMessages();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🧹 Messages: Unsubscribing from real-time updates');
+      messagesSubscription.unsubscribe();
+    };
   }, []);
 
   const loadMessages = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -67,6 +95,7 @@ export default function AdminMessages() {
       console.error('Error loading messages:', error);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 

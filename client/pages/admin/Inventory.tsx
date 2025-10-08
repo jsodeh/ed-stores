@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,12 +36,60 @@ export default function AdminInventory() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<'stock' | 'transactions'>('stock');
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     loadInventoryData();
+
+    // Set up real-time subscription for products and inventory transactions
+    const productsSubscription = supabase
+      .channel('admin-inventory-products-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        (payload) => {
+          console.log('🔄 Inventory: Products real-time update received:', payload);
+          // Only reload if we're not already loading
+          if (!loadingRef.current) {
+            loadInventoryData();
+          }
+        }
+      )
+      .subscribe();
+
+    const transactionsSubscription = supabase
+      .channel('admin-inventory-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventory_transactions'
+        },
+        (payload) => {
+          console.log('🔄 Inventory: Transactions real-time update received:', payload);
+          // Only reload if we're not already loading
+          if (!loadingRef.current) {
+            loadInventoryData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🧹 Inventory: Unsubscribing from real-time updates');
+      productsSubscription.unsubscribe();
+      transactionsSubscription.unsubscribe();
+    };
   }, []);
 
   const loadInventoryData = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     try {
       // Load products with stock info
@@ -88,6 +136,7 @@ export default function AdminInventory() {
       console.error('Error loading inventory data:', error);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 

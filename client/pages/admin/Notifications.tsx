@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,40 @@ export default function AdminNotifications() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>('all');
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     loadNotifications();
+
+    // Set up real-time subscription for notifications
+    const notificationsSubscription = supabase
+      .channel('admin-notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          console.log('🔄 Notifications: Real-time update received:', payload);
+          // Only reload if we're not already loading
+          if (!loadingRef.current) {
+            loadNotifications();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🧹 Notifications: Unsubscribing from real-time updates');
+      notificationsSubscription.unsubscribe();
+    };
   }, []);
 
   const loadNotifications = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     try {
       const { data, error } = await notifications.getAdminNotifications();
@@ -47,6 +75,7 @@ export default function AdminNotifications() {
       console.error('Error loading notifications:', error);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
