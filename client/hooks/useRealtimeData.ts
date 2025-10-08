@@ -103,6 +103,7 @@ export function useRealtimeData<T = any>({
       setError(err instanceof Error ? err : new Error(String(err)));
       setData([]);
     } finally {
+      clearTimeoutIfAny();
       setLoading(false);
       loadingRef.current = false;
     }
