@@ -15,6 +15,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<any>;
   checkUserByEmail: (email: string) => Promise<any>; // Add this line
+  loadUserProfile: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -101,7 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
+      console.log('AuthContext: Loading profile for user:', userId);
       const { data, error } = await profiles.getProfile(userId);
+      console.log('AuthContext: Profile loaded:', { data, error });
       
       if (error) {
         console.error('AuthContext: Error loading profile:', error);
@@ -233,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     updateProfile,
     checkUserByEmail,
+    loadUserProfile,
   };
 
   return (

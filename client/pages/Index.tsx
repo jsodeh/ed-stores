@@ -67,8 +67,7 @@ export default function Index() {
 
       <BottomNavigation />
       
-      {/* Mobile Quick Actions Button */}
-      <QuickActionsButton />
+
 
       {/* Modals */}
       <OrderTrackingModal

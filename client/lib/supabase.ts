@@ -200,7 +200,7 @@ export const profiles = {
 // Helper functions for products
 export const products = {
   // Get all products - optimized for product_details view
-  getAll: async () => {
+  getAll: async ({ category, search }: { category?: string | null, search?: string | null } = {}) => {
     if (supabaseInvalidApiKey) {
       console.error('❌ Products fetch aborted: invalid Supabase API key');
       return { data: [], error: new Error('Invalid Supabase API key configured') };
@@ -208,11 +208,21 @@ export const products = {
     try {
       console.log('🔍 Fetching products from product_details view...');
       
-      // Use the publicSupabase client for read operations to avoid auth issues
-      const { data, error } = await publicSupabase
+      let query = publicSupabase
         .from("product_details")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (category) {
+        query = query.eq('category_slug', category);
+      }
+
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      }
+      
+      // Use the publicSupabase client for read operations to avoid auth issues
+      const { data, error } = await query;
       
       console.log('🔍 Raw products query result:', { data, error, count: data?.length });
       

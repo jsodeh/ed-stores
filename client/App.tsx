@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QuickActionsButton } from "./components/QuickActionsButton";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { StoreProvider } from "./contexts/StoreContext";
@@ -78,6 +79,7 @@ const App = () => (
               {/* Catch-all route for 404 pages */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <QuickActionsButton />
           </BrowserRouter>
         </StoreProvider>
       </AuthProvider>

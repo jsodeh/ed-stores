@@ -84,7 +84,7 @@ export default function Profile() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      // Navigation is handled in the signOut function in AuthContext
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Error signing out:", error);
     }

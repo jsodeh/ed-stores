@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { useAdminOrders } from "@/hooks/useAdminOrders";
 import { Order } from "@shared/database.types";
 import {
   Search,
@@ -20,78 +20,9 @@ import {
 
 export default function AdminOrders() {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const loadingRef = useRef(false);
-
-  useEffect(() => {
-    loadOrders();
-
-    // Set up real-time subscription for orders
-    const ordersSubscription = supabase
-      .channel('admin-orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('🔄 Orders: Real-time update received:', payload);
-          // Only reload if we're not already loading
-          if (!loadingRef.current) {
-            loadOrders();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('🧹 Orders: Unsubscribing from real-time updates');
-      ordersSubscription.unsubscribe();
-    };
-  }, []);
-
-  const loadOrders = async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    console.log('📋 Orders: Loading orders...');
-    
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.warn('⏰ Orders: Loading timeout reached, forcing completion');
-      setLoading(false);
-      setOrders([]);
-      loadingRef.current = false;
-    }, 10000);
-    
-    try {
-      const { data, error } = await supabase
-        .from('order_details')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Orders: Error loading orders:', error);
-        throw error;
-      }
-      
-      console.log('✅ Orders: Loaded orders successfully:', data?.length || 0);
-      setOrders(data || []);
-    } catch (error) {
-      console.error('❌ Orders: Exception loading orders:', error);
-      setOrders([]); // Set empty array on error
-    } finally {
-      clearTimeout(timeoutId);
-      console.log('🏁 Orders: Setting loading to false');
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  };
+  const { data: orders = [], isLoading: loading, error } = useAdminOrders();
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -163,6 +94,14 @@ export default function AdminOrders() {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
+      </AdminPage>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminPage title="Orders Management">
+        <div className="text-red-500">Error loading orders: {error.message}</div>
       </AdminPage>
     );
   }

@@ -1,29 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { profiles } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
 
 export function UserDebug() {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, loading, loadUserProfile } = useAuth();
   const [emailProfile, setEmailProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
 
   useEffect(() => {
-    const fetchEmailProfile = async () => {
-      if (user?.email) {
-        setLoading(true);
-        try {
-          const result = await profiles.getProfileByEmail(user.email);
-          setEmailProfile(result.data);
-        } catch (error) {
-          console.error('Error fetching email profile:', error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
+    console.log('UserDebug: Auth state changed', { user, profile, isAdmin, loading });
+  }, [user, profile, isAdmin, loading]);
 
-    fetchEmailProfile();
-  }, [user?.email]);
+  const handleRefetchProfile = () => {
+    if (user) {
+      loadUserProfile(user.id);
+    }
+  };
 
   if (!user) {
     return (
@@ -64,18 +57,13 @@ export function UserDebug() {
           </div>
         )}
         
-        {emailProfile && (
-          <div className="mt-2 p-2 bg-white rounded border">
-            <h4 className="font-medium text-gray-800">Email Profile Data:</h4>
-            <pre className="text-xs overflow-auto">
-              {JSON.stringify(emailProfile, null, 2)}
-            </pre>
-          </div>
-        )}
-        
         {loading && (
           <div className="text-blue-600">Loading profile data...</div>
         )}
+
+        <Button onClick={handleRefetchProfile} disabled={loading} size="sm" variant="outline" className="mt-2">
+          Refetch Profile
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-// client/components/admin/ProductForm.tsx
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { Product, Category } from "@shared/database.types";
 import { X, Save, Loader2, Upload, Image as ImageIcon } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -25,9 +25,9 @@ interface ProductFormProps {
 
 export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -202,82 +202,60 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      // Debug: Log form data before processing
-      console.log('📝 ProductForm: Form data before submission:', formData);
-      
-      const productData = {
-        name: formData.name,
-        description: formData.description || null,
-        price: parseFloat(formData.price),
-        category_id: formData.category_id,
-        sku: formData.sku,
-        stock_quantity: parseInt(formData.stock_quantity) || 0,
-        low_stock_threshold: parseInt(formData.low_stock_threshold) || 10,
-        is_active: formData.is_active,
-        is_featured: formData.is_featured,
-        image_url: formData.image_url || null,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
-        tags: formData.tags
-          ? formData.tags
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          : [],
-        updated_at: new Date().toISOString(),
-      };
-      
-      // Debug: Log processed product data
-      console.log('📝 ProductForm: Processed product data:', productData);
-
+  const mutation = useMutation({
+    mutationFn: async (productData: any) => {
       if (product) {
-        console.log('📝 ProductForm: Updating existing product:', product.id);
-        console.log('📝 ProductForm: Update data:', productData);
-        
-        const { data: updatedProduct, error } = await supabase
+        const { data, error } = await supabase
           .from("products")
           .update(productData)
           .eq("id", product.id)
           .select()
           .single();
-          
-        if (error) {
-          console.error('❌ ProductForm: Update error:', error);
-          throw error;
-        }
-        
-        console.log('✅ ProductForm: Product updated successfully:', updatedProduct);
+        if (error) throw error;
+        return data;
       } else {
-        console.log('📝 ProductForm: Creating new product');
-        console.log('📝 ProductForm: Insert data:', productData);
-        
-        const { data: newProduct, error } = await supabase
+        const { data, error } = await supabase
           .from("products")
           .insert(productData)
           .select()
           .single();
-          
-        if (error) {
-          console.error('❌ ProductForm: Insert error:', error);
-          throw error;
-        }
-        
-        console.log('✅ ProductForm: Product created successfully:', newProduct);
+        if (error) throw error;
+        return data;
       }
-
-      // Add a small delay to ensure database changes are propagated
-      await new Promise(resolve => setTimeout(resolve, 500));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       onSave();
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Error saving product:", error);
       alert("Error saving product. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const productData = {
+      name: formData.name,
+      description: formData.description || null,
+      price: parseFloat(formData.price),
+      category_id: formData.category_id,
+      sku: formData.sku,
+      stock_quantity: parseInt(formData.stock_quantity) || 0,
+      low_stock_threshold: parseInt(formData.low_stock_threshold) || 10,
+      is_active: formData.is_active,
+      is_featured: formData.is_featured,
+      image_url: formData.image_url || null,
+      weight: formData.weight ? parseFloat(formData.weight) : null,
+      tags: formData.tags
+        ? formData.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : [],
+      updated_at: new Date().toISOString(),
+    };
+    mutation.mutate(productData);
   };
 
   return (
@@ -543,8 +521,8 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading || uploading} className="flex-1">
-              {loading ? (
+            <Button type="submit" disabled={mutation.isLoading || uploading} className="flex-1">
+              {mutation.isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving...

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,79 +26,49 @@ import {
   Eye,
   AlertTriangle,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
-
-  const loadingRef = useRef(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    loadProducts();
-
-    // Set up real-time subscription for products
-    const productsSubscription = supabase
-      .channel('admin-products-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'products'
-        },
-        (payload) => {
-          console.log('🔄 Products: Real-time update received:', payload);
-          // Only reload if we're not already loading
-          if (!loadingRef.current) {
-            loadProducts();
-          }
-        }
-      )
+    const channel = supabase
+      .channel('admin-products-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      })
       .subscribe();
 
     return () => {
-      console.log('🧹 Products: Unsubscribing from real-time updates');
-      productsSubscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
-  const loadProducts = async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    console.log('📦 Products: Loading products...');
+  const { data: products = [], isLoading: loading } = useQuery<Product[], Error>({
+    queryKey: ['admin-products', searchQuery],
+    queryFn: async () => {
+      let query = supabase.from("products").select(`
+        *,
+        categories:category_id (
+          id,
+          name,
+          slug,
+          color
+        )
+      `).order("created_at", { ascending: false });
 
-    const timeoutId = setTimeout(() => {
-      console.warn('⏰ Products: Loading timeout reached, forcing completion');
-      setLoading(false);
-      loadingRef.current = false;
-    }, 10000);
-
-    try {
-      const timestamp = Date.now();
-      const { data, error } = await supabase
-        .from("products")
-        .select(`
-          *,
-          categories:category_id (
-            id,
-            name,
-            slug,
-            color
-          )
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error('❌ Products: Error loading products:', error);
-        throw error;
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
       }
 
-      const transformedData = (data || []).map(product => ({
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(product => ({
         ...product,
         category_name: product.categories?.name || null,
         category_slug: product.categories?.slug || null,
@@ -106,27 +76,21 @@ export default function AdminProducts() {
         average_rating: 0,
         review_count: 0,
         category_id: product.category_id || product.categories?.id || null,
-        image_url: product.image_url ? `${product.image_url}?t=${timestamp}` : product.image_url
       }));
+    },
+  });
 
-      console.log('✅ Products: Loaded products successfully:', transformedData.length);
-      setProducts(transformedData);
-    } catch (error) {
-      console.error('❌ Products: Exception loading products:', error);
-      setProducts([]);
-    } finally {
-      clearTimeout(timeoutId);
-      console.log('🏁 Products: Setting loading to false');
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  };
-
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const deleteProductMutation = useMutation({
+    mutationFn: (productId: string) => supabase.from("products").delete().eq("id", productId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      setDeletingProduct(null);
+    },
+    onError: (error) => {
+      console.error("Error deleting product:", error);
+      alert("Error deleting product. Please try again.");
+    },
+  });
 
   const formatPrice = (price: number) => {
     return `₦${price.toLocaleString()}.00`;
@@ -137,38 +101,19 @@ export default function AdminProducts() {
     setShowForm(true);
   };
 
-  const handleDelete = async (product: Product) => {
+  const handleDelete = (product: Product) => {
     setDeletingProduct(product);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (!deletingProduct) return;
-
-    try {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", deletingProduct.id);
-
-      if (error) throw error;
-      await loadProducts();
-    } catch (error) {
-      console.error("Error deleting product:", error);
-      alert("Error deleting product. Please try again.");
-    } finally {
-      setDeletingProduct(null);
-    }
+    deleteProductMutation.mutate(deletingProduct.id);
   };
 
-  const handleFormSave = async () => {
+  const handleFormSave = () => {
     setShowForm(false);
     setEditingProduct(null);
-    // Force a fresh reload of products to ensure updated images are shown
-    await loadProducts();
-    // Also trigger a small delay to ensure any caching is cleared
-    setTimeout(() => {
-      loadProducts();
-    }, 1000);
+    queryClient.invalidateQueries({ queryKey: ['admin-products'] });
   };
 
   const handleFormCancel = () => {
@@ -200,7 +145,7 @@ export default function AdminProducts() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={loadProducts}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-products'] })}
               disabled={loading}
             >
               {loading ? (
@@ -274,7 +219,7 @@ export default function AdminProducts() {
         {/* Products Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Products ({filteredProducts.length})</CardTitle>
+            <CardTitle>Products ({products.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -291,7 +236,7 @@ export default function AdminProducts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product) => (
+                  {products.map((product) => (
                     <tr key={product.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <div className="flex items-center gap-3">

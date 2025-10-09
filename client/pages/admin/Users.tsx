@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { UserProfile } from "@shared/database.types";
 import {
   Search,
@@ -15,76 +15,8 @@ import {
 } from "lucide-react";
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const loadingRef = useRef(false);
-
-  useEffect(() => {
-    loadUsers();
-
-    // Set up real-time subscription for users
-    const usersSubscription = supabase
-      .channel('admin-users-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_profiles'
-        },
-        (payload) => {
-          console.log('🔄 Users: Real-time update received:', payload);
-          // Only reload if we're not already loading
-          if (!loadingRef.current) {
-            loadUsers();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('🧹 Users: Unsubscribing from real-time updates');
-      usersSubscription.unsubscribe();
-    };
-  }, []);
-
-  const loadUsers = async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    console.log('👥 Users: Loading users...');
-
-    const timeoutId = setTimeout(() => {
-      console.warn('⏰ Users: Loading timeout reached, forcing completion');
-      setLoading(false);
-      loadingRef.current = false;
-    }, 10000);
-
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Users: Error loading users:', error);
-        throw error;
-      }
-      
-      console.log('✅ Users: Loaded users:', data?.length || 0);
-      setUsers(data || []);
-    } catch (error) {
-      console.error('❌ Users: Exception loading users:', error);
-      setUsers([]); // Set empty array on error
-    } finally {
-      clearTimeout(timeoutId);
-      console.log('🏁 Users: Setting loading to false');
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  };
+  const { data: users = [], isLoading: loading, error } = useAdminUsers();
 
   const filteredUsers = users.filter(user =>
     user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -116,6 +48,10 @@ export default function AdminUsers() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
     );
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error loading users: {error.message}</div>;
   }
 
   return (

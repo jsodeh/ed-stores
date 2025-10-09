@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,144 +27,61 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function AdminCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(
     null,
   );
+  const queryClient = useQueryClient();
 
-  const loadingRef = useRef(false);
+  const { data: categories = [], isLoading: loading } = useQuery<Category[], Error>({
+    queryKey: ['admin-categories', searchQuery],
+    queryFn: async () => {
+      let query = supabase.from("categories").select("*").order("sort_order", { ascending: true });
 
-  useEffect(() => {
-    loadCategories();
-
-    // Set up real-time subscription for categories
-    const categoriesSubscription = supabase
-      .channel('admin-categories-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'categories'
-        },
-        (payload) => {
-          console.log('🔄 Categories: Real-time update received:', payload);
-          // Only reload if we're not already loading
-          if (!loadingRef.current) {
-            loadCategories();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('🧹 Categories: Unsubscribing from real-time updates');
-      categoriesSubscription.unsubscribe();
-    };
-  }, []);
-
-  const loadCategories = async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    console.log('📂 Categories: Loading categories...');
-
-    const timeoutId = setTimeout(() => {
-      console.warn('⏰ Categories: Loading timeout reached, forcing completion');
-      setLoading(false);
-      loadingRef.current = false;
-    }, 10000);
-
-    try {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("sort_order", { ascending: true });
-
-      if (error) {
-        console.error('❌ Categories: Error loading categories:', error);
-        throw error;
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
 
-      console.log('✅ Categories: Loaded categories successfully:', data?.length || 0);
-      setCategories(data || []);
-    } catch (error) {
-      console.error('❌ Categories: Exception loading categories:', error);
-      setCategories([]);
-    } finally {
-      clearTimeout(timeoutId);
-      console.log('🏁 Categories: Setting loading to false');
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  };
-
-  const filteredCategories = categories.filter(
-    (category) =>
-      category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      category.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  const handleEdit = (category: Category) => {
-    setEditingCategory(category);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (category: Category) => {
-    setDeletingCategory(category);
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingCategory) return;
-
-    try {
-      const { error } = await supabase
-        .from("categories")
-        .delete()
-        .eq("id", deletingCategory.id);
-
+      const { data, error } = await query;
       if (error) throw error;
-      await loadCategories();
-    } catch (error) {
+      return data || [];
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      const { error } = await supabase.from("categories").delete().eq("id", categoryId);
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setDeletingCategory(null);
+    },
+    onError: (error) => {
       console.error("Error deleting category:", error);
       alert("Error deleting category. Please try again.");
-    } finally {
-      setDeletingCategory(null);
-    }
-  };
+    },
+  });
 
-  const handleFormSave = async () => {
-    setShowForm(false);
-    setEditingCategory(null);
-    await loadCategories();
-  };
+  const updateSortOrderMutation = useMutation({
+    mutationFn: async ({ categoryId, direction }: { categoryId: string, direction: "up" | "down" }) => {
+      const currentIndex = categories.findIndex((c) => c.id === categoryId);
+      if (currentIndex === -1) return;
 
-  const handleFormCancel = () => {
-    setShowForm(false);
-    setEditingCategory(null);
-  };
+      const targetIndex =
+        direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= categories.length) return;
 
-  const updateSortOrder = async (
-    categoryId: string,
-    direction: "up" | "down",
-  ) => {
-    const currentIndex = categories.findIndex((c) => c.id === categoryId);
-    if (currentIndex === -1) return;
+      const currentCategory = categories[currentIndex];
+      const targetCategory = categories[targetIndex];
 
-    const targetIndex =
-      direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= categories.length) return;
-
-    const currentCategory = categories[currentIndex];
-    const targetCategory = categories[targetIndex];
-
-    try {
       await Promise.all([
         supabase
           .from("categories")
@@ -175,11 +92,38 @@ export default function AdminCategories() {
           .update({ sort_order: currentCategory.sort_order })
           .eq("id", targetCategory.id),
       ]);
-
-      await loadCategories();
-    } catch (error) {
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+    },
+    onError: (error) => {
       console.error("Error updating sort order:", error);
-    }
+    },
+  });
+
+  const handleEdit = (category: Category) => {
+    setEditingCategory(category);
+    setShowForm(true);
+  };
+
+  const handleDelete = (category: Category) => {
+    setDeletingCategory(category);
+  };
+
+  const confirmDelete = () => {
+    if (!deletingCategory) return;
+    deleteCategoryMutation.mutate(deletingCategory.id);
+  };
+
+  const handleFormSave = () => {
+    setShowForm(false);
+    setEditingCategory(null);
+    queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingCategory(null);
   };
 
   if (loading) {
@@ -261,7 +205,7 @@ export default function AdminCategories() {
         {/* Categories Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Categories ({filteredCategories.length})</CardTitle>
+            <CardTitle>Categories ({categories.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -277,7 +221,7 @@ export default function AdminCategories() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCategories.map((category) => (
+                  {categories.map((category, index) => (
                     <tr key={category.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <div className="flex items-center gap-2">
@@ -290,13 +234,9 @@ export default function AdminCategories() {
                               size="sm"
                               className="w-6 h-6 p-0"
                               onClick={() =>
-                                updateSortOrder(category.id!, "up")
+                                updateSortOrderMutation.mutate({ categoryId: category.id!, direction: "up" })
                               }
-                              disabled={
-                                categories.findIndex(
-                                  (c) => c.id === category.id,
-                                ) === 0
-                              }
+                              disabled={index === 0}
                             >
                               <ArrowUp className="h-3 w-3" />
                             </Button>
@@ -305,14 +245,9 @@ export default function AdminCategories() {
                               size="sm"
                               className="w-6 h-6 p-0"
                               onClick={() =>
-                                updateSortOrder(category.id!, "down")
+                                updateSortOrderMutation.mutate({ categoryId: category.id!, direction: "down" })
                               }
-                              disabled={
-                                categories.findIndex(
-                                  (c) => c.id === category.id,
-                                ) ===
-                                categories.length - 1
-                              }
+                              disabled={index === categories.length - 1}
                             >
                               <ArrowDown className="h-3 w-3" />
                             </Button>

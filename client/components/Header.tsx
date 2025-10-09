@@ -65,16 +65,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Admin Quick Access Button */}
-          {isAdmin && (
-            <button 
-              onClick={() => navigate("/admin")}
-              className="hidden md:flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Admin</span>
-            </button>
-          )}
+
           
           <button 
             className="relative" 
@@ -91,12 +82,16 @@ export function Header() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <Menu className="h-4 w-4 text-white" />
+                <User className="h-4 w-4 text-white" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 mt-2">
               {isAuthenticated ? (
                 <>
+                  <div className="px-4 py-2 border-b">
+                    <p className="text-sm font-medium text-gray-900">{profile?.full_name || user?.email}</p>
+                    <p className="text-sm text-gray-500">{user?.email}</p>
+                  </div>
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
@@ -109,17 +104,7 @@ export function Header() {
                     <Heart className="mr-2 h-4 w-4" />
                     <span>Favorites</span>
                   </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem 
-                      onClick={() => navigate("/admin")}
-                      className="bg-yellow-50 border-l-4 border-yellow-500"
-                    >
-                      <Settings className="mr-2 h-4 w-4 text-yellow-600" />
-                      <span className="font-semibold text-yellow-700">Admin Dashboard</span>
-                      {/* Visual indicator for debugging */}
-                      <span className="ml-2 bg-yellow-500 text-white text-xs px-1 rounded">ADMIN</span>
-                    </DropdownMenuItem>
-                  )}
+
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sign Out</span>

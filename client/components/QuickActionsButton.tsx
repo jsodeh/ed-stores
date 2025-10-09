@@ -6,17 +6,20 @@ import {
   Package, 
   HelpCircle, 
   User,
-  ChevronUp
+  ChevronUp,
+  Settings
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { OrderTrackingModal } from "./OrderTrackingModal";
 import { HelpSupportModal } from "./HelpSupportModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function QuickActionsButton() {
   const [open, setOpen] = useState(false);
   const [showOrderTracking, setShowOrderTracking] = useState(false);
   const [showHelpSupport, setShowHelpSupport] = useState(false);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const actions = [
     {
@@ -47,6 +50,18 @@ export function QuickActionsButton() {
       },
     },
   ];
+
+  if (isAdmin) {
+    actions.push({
+      id: "admin",
+      label: "Admin Dashboard",
+      icon: Settings,
+      action: () => {
+        setOpen(false);
+        navigate("/admin");
+      },
+    });
+  }
 
   return (
     <>
