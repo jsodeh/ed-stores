@@ -107,8 +107,7 @@ export default function AdminOrders() {
   }
 
   return (
-    <AdminPage title="Orders Management">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="flex gap-4">
@@ -248,6 +247,5 @@ export default function AdminOrders() {
           </CardContent>
         </Card>
       </div>
-    </AdminPage>
   );
 }

@@ -176,8 +176,7 @@ export default function AdminMessages() {
   }
 
   return (
-    <AdminPage title="Messages & Communications">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Messages List */}
           <div className="lg:col-span-2 space-y-4">
@@ -348,6 +347,5 @@ export default function AdminMessages() {
           </div>
         </div>
       </div>
-    </AdminPage>
   );
 }
