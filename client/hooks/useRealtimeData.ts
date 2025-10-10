@@ -236,11 +236,7 @@ export function useAdminStats() {
             .limit(5),
         ),
         withTimeout(
-          supabase
-            .from("products")
-            .select("id, name, stock_quantity, low_stock_threshold")
-            .filter("stock_quantity", "lt.cs", "low_stock_threshold")
-            .limit(5),
+          supabase.rpc("get_low_stock_products", { limit_count: 5 })
         ),
         withTimeout(supabase.from("orders").select("status")),
       ]);
