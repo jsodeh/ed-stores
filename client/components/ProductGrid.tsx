@@ -7,7 +7,7 @@ import { ProductModal } from "./ProductModal";
 import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
-  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading, selectedCategory } =
+  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading, selectedCategory, cartItems, updateCartQuantity } =
     useStore();
   const { isAuthenticated } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -30,7 +30,12 @@ export function ProductGrid() {
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent opening modal when clicking add button
-    addToCart(product, 1); // Explicitly specify quantity as 1
+    const existingCartItem = cartItems.find(item => item.products?.id === product.id);
+    if (existingCartItem) {
+      updateCartQuantity(product.id, existingCartItem.quantity + 1);
+    } else {
+      addToCart(product, 1);
+    }
   };
 
   const handleToggleFavorite = (productId: string, e: React.MouseEvent) => {

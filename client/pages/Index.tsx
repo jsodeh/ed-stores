@@ -10,11 +10,13 @@ import { OrderTrackingModal } from "@/components/OrderTrackingModal";
 import { HelpSupportModal } from "@/components/HelpSupportModal";
 import { QuickActionsButton } from "@/components/QuickActionsButton";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Index() {
   const [showOrderTracking, setShowOrderTracking] = useState(false);
   const [showHelpSupport, setShowHelpSupport] = useState(false);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,6 +60,14 @@ export default function Index() {
                   >
                     My Account
                   </button>
+                  {isAdmin && (
+                    <button 
+                      className="w-full text-left p-3 rounded-lg hover:bg-gray-50 bg-yellow-50 text-yellow-600"
+                      onClick={() => navigate('/admin')}
+                    >
+                      Admin Dashboard
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

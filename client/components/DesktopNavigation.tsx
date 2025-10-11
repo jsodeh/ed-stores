@@ -34,10 +34,7 @@ export function DesktopNavigation() {
     { id: "profile", icon: User, label: "Profile", path: "/profile" },
   ];
 
-  // Add admin dashboard link for admin users
-  const navItems = isAdmin 
-    ? [...baseNavItems, { id: "admin", icon: Settings, label: "Admin", path: "/admin" }] 
-    : baseNavItems;
+  const navItems = baseNavItems;
 
   return (
     <>
