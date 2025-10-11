@@ -69,7 +69,7 @@ export default function Checkout() {
         .from("addresses")
         .insert({
           user_id: user?.id || null,
-          type: "delivery",
+          type: "shipping",
           street_address: formData.address,
           city: formData.city,
           state: formData.state,
