@@ -201,7 +201,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Cart actions
   const addToCart = (product: Product, quantity = 1) => {
     if (isAuthenticated) {
-      addToCartMutation.mutate({ product, quantity });
+      const existingCartItem = cartItems.find(item => item.product_id === product.id);
+      if (existingCartItem) {
+        const newQuantity = existingCartItem.quantity + quantity;
+        updateCartQuantityMutation.mutate({ productId: product.id, quantity: newQuantity });
+        toast({ title: "Cart updated" });
+      } else {
+        addToCartMutation.mutate({ product, quantity });
+      }
     } else {
       const existingItem = guestCart.find(item => item.productId === product.id);
       if (existingItem) {
