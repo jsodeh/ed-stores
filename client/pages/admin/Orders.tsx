@@ -15,13 +15,16 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Edit
+  Edit,
+  Bell
 } from "lucide-react";
 
 export default function AdminOrders() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showNewOrderAlert, setShowNewOrderAlert] = useState(false);
+  const [previousOrderCount, setPreviousOrderCount] = useState(0);
   const { data: orders = [], isLoading: loading, error } = useAdminOrders();
 
   const filteredOrders = orders.filter(order => {
@@ -34,6 +37,22 @@ export default function AdminOrders() {
     
     return matchesSearch && matchesStatus;
   });
+
+  // Detect new orders and show alert
+  useEffect(() => {
+    if (orders.length > previousOrderCount && previousOrderCount > 0) {
+      const newOrderCount = orders.length - previousOrderCount;
+      setShowNewOrderAlert(true);
+      
+      // Auto-hide alert after 5 seconds
+      const timer = setTimeout(() => {
+        setShowNewOrderAlert(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+    setPreviousOrderCount(orders.length);
+  }, [orders.length, previousOrderCount]);
 
   const formatPrice = (price: number) => {
     return `₦${price.toLocaleString()}.00`;
@@ -108,6 +127,23 @@ export default function AdminOrders() {
 
   return (
     <div className="space-y-6">
+        {/* New Order Alert */}
+        {showNewOrderAlert && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            <span className="font-medium">New order(s) received!</span>
+            <span className="text-sm">The orders list has been updated.</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowNewOrderAlert(false)}
+              className="ml-auto text-green-700 hover:text-green-800"
+            >
+              ×
+            </Button>
+          </div>
+        )}
+
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="flex gap-4">

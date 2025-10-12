@@ -32,6 +32,8 @@ interface StoreContextType {
   // Loading states
   loading: boolean;
   cartLoading: boolean;
+  isAddingToCart: boolean;
+  isUpdatingCart: boolean;
 
   // Search and filters
   searchQuery: string;
@@ -152,7 +154,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     onError: () => toast({ title: "Error", description: "Failed to update favorites.", variant: "destructive" }),
   });
 
-  // Guest cart logic
+  // Guest cart logic and migration
   useEffect(() => {
     if (!isAuthenticated) {
       const savedCart = localStorage.getItem("guestCart");
@@ -165,6 +167,82 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [isAuthenticated]);
+
+  // Migrate guest cart to authenticated cart when user logs in
+  useEffect(() => {
+    const migrateGuestCart = async () => {
+      if (isAuthenticated && user && guestCart.length > 0) {
+        console.log('🔄 Migrating guest cart to authenticated cart:', guestCart);
+        
+        try {
+          const migrationResults = [];
+          let successCount = 0;
+          let failureCount = 0;
+          
+          // Migrate each guest cart item to the authenticated cart
+          for (const guestItem of guestCart) {
+            if (guestItem.product) {
+              try {
+                await cartApi.addItem(user.id, guestItem.productId, guestItem.quantity);
+                successCount++;
+                migrationResults.push({ success: true, product: guestItem.product.name });
+              } catch (error) {
+                failureCount++;
+                migrationResults.push({ 
+                  success: false, 
+                  product: guestItem.product.name, 
+                  error: error 
+                });
+                console.error(`Failed to migrate item ${guestItem.product.name}:`, error);
+              }
+            }
+          }
+          
+          // Clear guest cart after migration attempt (regardless of individual failures)
+          setGuestCart([]);
+          localStorage.removeItem("guestCart");
+          
+          // Invalidate cart query to refresh the authenticated cart
+          queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
+          
+          // Show appropriate toast message based on results
+          if (successCount === guestCart.length) {
+            console.log('✅ Guest cart migration completed successfully');
+            toast({ 
+              title: "Cart synced", 
+              description: `${successCount} item(s) added to your cart.` 
+            });
+          } else if (successCount > 0) {
+            console.log('⚠️ Guest cart migration partially completed');
+            toast({ 
+              title: "Cart partially synced", 
+              description: `${successCount} item(s) added, ${failureCount} failed. Please try adding failed items again.`,
+              variant: "destructive"
+            });
+          } else {
+            console.log('❌ Guest cart migration completely failed');
+            toast({ 
+              title: "Cart sync failed", 
+              description: "Could not sync your cart items. Please try adding them again.",
+              variant: "destructive" 
+            });
+          }
+        } catch (error) {
+          console.error('❌ Guest cart migration failed:', error);
+          toast({ 
+            title: "Cart sync failed", 
+            description: "Could not sync your guest cart items. Please try adding them again.",
+            variant: "destructive" 
+          });
+        }
+      }
+    };
+
+    // Only run migration once when user becomes authenticated
+    if (isAuthenticated && user) {
+      migrateGuestCart();
+    }
+  }, [isAuthenticated, user, queryClient]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -200,11 +278,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Cart actions
   const addToCart = (product: Product, quantity = 1) => {
-    if (isAuthenticated) {
+    // Prevent multiple rapid clicks by checking if mutations are pending
+    if (addToCartMutation.isPending || updateCartQuantityMutation.isPending) {
+      console.log('🛒 Add to cart blocked: mutation already in progress');
+      return;
+    }
+
+    if (isAuthenticated && user) {
       const existingCartItem = cartItems.find(item => item.product_id === product.id);
       if (existingCartItem) {
         const newQuantity = existingCartItem.quantity + quantity;
-        updateCartQuantityMutation.mutate({ productId: product.id, quantity: newQuantity });
+        updateCartQuantityMutation.mutate({ productId: product.id!, quantity: newQuantity });
         toast({ title: "Cart updated" });
       } else {
         addToCartMutation.mutate({ product, quantity });
@@ -280,6 +364,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     favoriteProducts,
     loading: productsLoading || categoriesLoading,
     cartLoading,
+    isAddingToCart: addToCartMutation.isPending,
+    isUpdatingCart: updateCartQuantityMutation.isPending,
     searchQuery,
     selectedCategory,
     setSearchQuery,

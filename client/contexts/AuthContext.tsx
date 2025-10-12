@@ -52,23 +52,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     
-    // Get initial session
+    // Get initial session with better error handling
     const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          await loadUserProfile(session.user.id);
+        if (error) {
+          console.error('AuthContext: Session error:', error);
+          // Handle refresh token errors by clearing the session
+          if (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found')) {
+            console.log('🔄 AuthContext: Clearing invalid session due to refresh token error');
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+          }
         } else {
-          setLoading(false);
+          setSession(session);
+          setUser(session?.user ?? null);
+
+          if (session?.user) {
+            await loadUserProfile(session.user.id);
+          }
         }
       } catch (error) {
         console.error('AuthContext: Error getting initial session:', error);
+        // Clear session on any error to prevent stuck states
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      } finally {
         if (mounted) {
           setLoading(false);
         }
@@ -77,20 +92,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     getInitialSession();
 
-    // Listen for auth changes
+    // Listen for auth changes with better error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          await loadUserProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
+        console.log('🔄 AuthContext: Auth state changed:', event, session?.user?.id);
+        
+        // Handle specific auth events
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            await loadUserProfile(session.user.id);
+          } else {
+            setProfile(null);
+          }
+        } else if (event === 'SIGNED_IN') {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            await loadUserProfile(session.user.id);
+          }
         }
+        
+        setLoading(false);
       }
     );
 

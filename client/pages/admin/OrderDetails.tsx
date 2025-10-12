@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AdminPage } from "@/components/admin/AdminLayout";
+// Remove AdminPage import - we'll use a simple div wrapper
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -151,31 +151,26 @@ export default function AdminOrderDetails() {
 
   if (loading) {
     return (
-      <AdminPage title="Order Details">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </AdminPage>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   if (!order) {
     return (
-      <AdminPage title="Order Details">
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Order Not Found</h2>
-          <p className="text-gray-600 mb-6">The order you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate("/admin/orders")}>
-            Back to Orders
-          </Button>
-        </div>
-      </AdminPage>
+      <div className="text-center py-12">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Order Not Found</h2>
+        <p className="text-gray-600 mb-6">The order you're looking for doesn't exist.</p>
+        <Button onClick={() => navigate("/admin/orders")}>
+          Back to Orders
+        </Button>
+      </div>
     );
   }
 
   return (
-    <AdminPage title={`Order ${order.order_number}`}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Back Button */}
         <Button
           variant="outline"
@@ -383,6 +378,5 @@ export default function AdminOrderDetails() {
           </CardContent>
         </Card>
       </div>
-    </AdminPage>
   );
 }

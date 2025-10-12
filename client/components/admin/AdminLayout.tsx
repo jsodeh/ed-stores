@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { AuthGuard, useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BarChart3,
   Package,
@@ -53,13 +53,14 @@ export function AdminLayout({ title }: AdminLayoutProps) {
   const currentPath = location.pathname;
 
   return (
-    <AuthGuard requireAuth requireAdmin>
-      <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex">
         {/* Sidebar */}
         <div className={`
-          w-64 bg-white shadow-lg flex-shrink-0
-          lg:block
-          ${sidebarOpen ? 'block' : 'hidden lg:block'}
+          w-64 bg-white shadow-lg flex-shrink-0 z-50
+          fixed lg:relative lg:translate-x-0
+          h-full lg:h-auto
+          transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
           <div className="flex flex-col h-full">
             {/* Header */}
@@ -139,7 +140,7 @@ export function AdminLayout({ title }: AdminLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col lg:ml-0">
           {/* Header */}
           <header className="bg-white border-b sticky top-0 z-10">
             <div className="flex items-center justify-between p-4">
@@ -174,12 +175,11 @@ export function AdminLayout({ title }: AdminLayoutProps) {
         {/* Overlay for mobile */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300"
             onClick={() => setSidebarOpen(false)}
           />
         )}
       </div>
-    </AuthGuard>
   );
 }
 

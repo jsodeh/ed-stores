@@ -324,6 +324,13 @@ export function useAdminStats() {
           { event: "*", schema: "public", table: "orders" },
           () => fetchStats(),
         ),
+      supabase
+        .channel("admin-stats-order-details")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "order_details" },
+          () => fetchStats(),
+        ),
     ];
 
     channels.forEach((channel) => channel.subscribe());

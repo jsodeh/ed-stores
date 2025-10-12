@@ -18,7 +18,7 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
-  const { addToCart, toggleFavorite, isFavorite, cartItems } = useStore();
+  const { addToCart, toggleFavorite, isFavorite, cartItems, isAddingToCart } = useStore();
   const [quantity, setQuantity] = useState(1);
 
   if (!product) return null;
@@ -141,9 +141,10 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
             <Button
               className="flex-1 bg-primary hover:bg-primary/90"
               onClick={handleAddToCart}
+              disabled={isAddingToCart}
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
-              Add to Cart
+              {isAddingToCart ? "Adding..." : "Add to Cart"}
             </Button>
           </div>
         </div>

@@ -47,13 +47,26 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         }
       ),
 
-      // Orders channel
+      // Orders channel - listen to both orders and order_details tables
       supabase.channel('admin-orders').on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
           console.log('🔄 Orders table changed:', payload);
           adminCache.invalidatePattern('orders');
+          adminCache.invalidatePattern('admin-orders');
+          adminCache.invalidatePattern('dashboard');
+        }
+      ),
+      
+      // Order details channel
+      supabase.channel('admin-order-details').on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_details' },
+        (payload) => {
+          console.log('🔄 Order details table changed:', payload);
+          adminCache.invalidatePattern('orders');
+          adminCache.invalidatePattern('admin-orders');
           adminCache.invalidatePattern('dashboard');
         }
       ),
@@ -71,17 +84,17 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     ];
 
     // Subscribe to all channels
-    adminChannels.forEach(channel => channel.subscribe());
-    setChannels(adminChannels);
+    channels.forEach(channel => channel.subscribe());
+    setChannels(channels);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       
       // Unsubscribe from channels
-      adminChannels.forEach(channel => supabase.removeChannel(channel));
+      channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, []);
+  }, [isAuthenticated, isAdmin, adminCache]);
 
   const refreshAll = async () => {
     console.log('🔄 Refreshing all admin data...');

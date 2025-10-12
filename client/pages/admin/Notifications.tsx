@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { AdminPage } from "@/components/admin/AdminLayout";
+// Remove AdminPage import - we'll use a simple div wrapper
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -168,11 +168,9 @@ export default function AdminNotifications() {
 
   if (loading) {
     return (
-      <AdminPage title="Notifications">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </AdminPage>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     );
   }
 

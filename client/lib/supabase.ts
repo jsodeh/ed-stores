@@ -49,11 +49,15 @@ function normalizeError(err: any): Error | null {
 
 export { supabaseInvalidApiKey };
 
+// Single Supabase client instance to prevent "Multiple GoTrueClient instances" warning
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    flowType: 'pkce',
+    // Add better error handling for refresh token issues
+    debug: import.meta.env.MODE === 'development',
   },
   global: {
     headers: {
@@ -62,20 +66,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-// A secondary client without user session for public, cacheable reads
-export const publicSupabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-    detectSessionInUrl: false,
-    storageKey: 'sb-public',
-  },
-  global: {
-    headers: {
-      'x-application-origin': 'ed-stores-public'
-    }
-  }
-});
+// For public operations, use the same client but with different storage key
+export const publicSupabase = supabase;
 
 // Helper functions for auth
 // Initial lightweight validation to detect invalid API keys early
@@ -485,35 +477,66 @@ export const cart = {
   addItem: async (userId: string, productId: string, quantity: number = 1) => {
     try {
       console.log('🛒 Adding item to cart:', { userId, productId, quantity });
-      const { data, error } = await supabase
+      
+      // First check if item already exists
+      const { data: existingItem } = await supabase
         .from("cart_items")
-        .upsert(
-          {
+        .select("*")
+        .eq("user_id", userId)
+        .eq("product_id", productId)
+        .single();
+      
+      if (existingItem) {
+        // Update existing item quantity
+        const newQuantity = existingItem.quantity + quantity;
+        const { data, error } = await supabase
+          .from("cart_items")
+          .update({ quantity: newQuantity })
+          .eq("user_id", userId)
+          .eq("product_id", productId)
+          .select();
+        
+        if (error) {
+          console.error("❌ Cart addItem (update) Error:", error);
+          if (error.message?.includes('401') || 
+              error.message?.includes('403') || 
+              error.message?.includes('permission')) {
+            console.warn('🔐 Authentication/Permission error detected for cart addItem (update). This might be due to RLS policies.');
+            return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
+          }
+          return { data: null, error: normalizeError(error) };
+        }
+        
+        console.log('✅ Item quantity updated in cart successfully');
+        console.log('📦 Updated cart item data:', data);
+        return { data, error: null };
+      } else {
+        // Insert new item
+        const { data, error } = await supabase
+          .from("cart_items")
+          .insert({
             user_id: userId,
             product_id: productId,
             quantity,
-          },
-          {
-            onConflict: "user_id,product_id",
-          },
-        )
-        .select();
-      
-      if (error) {
-        console.error("❌ Cart addItem Error:", error);
-        // Check if it's an authentication/permission error
-        if (error.message?.includes('401') || 
-            error.message?.includes('403') || 
-            error.message?.includes('permission')) {
-          console.warn('🔐 Authentication/Permission error detected for cart addItem. This might be due to RLS policies.');
-          return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
+          })
+          .select();
+        
+        if (error) {
+          console.error("❌ Cart addItem (insert) Error:", error);
+          // Check if it's an authentication/permission error
+          if (error.message?.includes('401') || 
+              error.message?.includes('403') || 
+              error.message?.includes('permission')) {
+            console.warn('🔐 Authentication/Permission error detected for cart addItem (insert). This might be due to RLS policies.');
+            return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
+          }
+          return { data: null, error: normalizeError(error) };
         }
-        return { data: null, error: normalizeError(error) };
+        
+        console.log('✅ Item added to cart successfully');
+        console.log('📦 Added cart item data:', data);
+        return { data, error: null };
       }
-      
-      console.log('✅ Item added to cart successfully');
-      console.log('📦 Added cart item data:', data);
-      return { data, error: null };
     } catch (err) {
       console.error("❌ Cart addItem error:", err);
       return { data: null, error: normalizeError(err) };

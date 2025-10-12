@@ -7,7 +7,7 @@ import { ProductModal } from "./ProductModal";
 import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
-  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading, selectedCategory } =
+  const { filteredProducts, addToCart, toggleFavorite, isFavorite, loading, selectedCategory, isAddingToCart } =
     useStore();
   const { isAuthenticated } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -111,8 +111,11 @@ export function ProductGrid() {
                     size="icon"
                     className="w-8 h-8 rounded-full bg-primary hover:bg-primary/90"
                     onClick={(e) => handleAddToCart(product, e)}
+                    disabled={isAddingToCart}
                   >
-                    <span className="text-white text-lg">+</span>
+                    <span className="text-white text-lg">
+                      {isAddingToCart ? "..." : "+"}
+                    </span>
                   </Button>
                 </div>
               </div>

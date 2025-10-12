@@ -39,19 +39,21 @@ export default function AdminCategories() {
   const queryClient = useQueryClient();
 
   const { data: categories = [], isLoading: loading } = useQuery<Category[], Error>({
-    queryKey: ['admin-categories', searchQuery],
+    queryKey: ['admin-categories'],
     queryFn: async () => {
-      let query = supabase.from("categories").select("*").order("sort_order", { ascending: true });
-
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.from("categories").select("*").order("sort_order", { ascending: true });
       if (error) throw error;
       return data || [];
     },
+    staleTime: 30000, // Consider data stale after 30 seconds
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
+
+  // Filter categories based on search query
+  const filteredCategories = categories.filter(category =>
+    category.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    category.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const deleteCategoryMutation = useMutation({
     mutationFn: async (categoryId: string) => {
@@ -205,7 +207,7 @@ export default function AdminCategories() {
         {/* Categories Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Categories ({categories.length})</CardTitle>
+            <CardTitle>Categories ({filteredCategories.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -221,7 +223,7 @@ export default function AdminCategories() {
                   </tr>
                 </thead>
                 <tbody>
-                  {categories.map((category, index) => (
+                  {filteredCategories.map((category, index) => (
                     <tr key={category.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <div className="flex items-center gap-2">

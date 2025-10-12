@@ -49,9 +49,9 @@ export default function AdminProducts() {
   }, [queryClient]);
 
   const { data: products = [], isLoading: loading } = useQuery<Product[], Error>({
-    queryKey: ['admin-products', searchQuery],
+    queryKey: ['admin-products'],
     queryFn: async () => {
-      let query = supabase.from("products").select(`
+      const { data, error } = await supabase.from("products").select(`
         *,
         categories:category_id (
           id,
@@ -61,11 +61,6 @@ export default function AdminProducts() {
         )
       `).order("created_at", { ascending: false });
 
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
 
       return (data || []).map(product => ({
@@ -78,7 +73,15 @@ export default function AdminProducts() {
         category_id: product.category_id || product.categories?.id || null,
       }));
     },
+    staleTime: 30000, // Consider data stale after 30 seconds
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
+
+  // Filter products based on search query
+  const filteredProducts = products.filter(product =>
+    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const deleteProductMutation = useMutation({
     mutationFn: (productId: string) => supabase.from("products").delete().eq("id", productId),
@@ -219,7 +222,7 @@ export default function AdminProducts() {
         {/* Products Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Products ({products.length})</CardTitle>
+            <CardTitle>Products ({filteredProducts.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -236,7 +239,7 @@ export default function AdminProducts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
+                  {filteredProducts.map((product) => (
                     <tr key={product.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <div className="flex items-center gap-3">

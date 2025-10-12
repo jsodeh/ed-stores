@@ -27,6 +27,7 @@ export default function Store() {
     filteredProducts,
     categories,
     loading,
+    isAddingToCart,
   } = useStore();
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -242,8 +243,11 @@ export default function Store() {
                         size="icon"
                         className="w-8 h-8 rounded-full bg-primary hover:bg-primary/90"
                         onClick={(e) => handleAddToCart(product, e)}
+                        disabled={isAddingToCart}
                       >
-                        <span className="text-white text-lg">+</span>
+                        <span className="text-white text-lg">
+                          {isAddingToCart ? "..." : "+"}
+                        </span>
                       </Button>
                     </div>
                   </div>
