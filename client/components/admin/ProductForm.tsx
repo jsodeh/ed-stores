@@ -243,35 +243,61 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
       if (product) {
         console.log("✏️ ProductForm: Updating existing product:", product.id);
+        
+        // First check if the product exists
+        const { data: existingProduct, error: checkError } = await supabase
+          .from("products")
+          .select("id")
+          .eq("id", product.id)
+          .single();
+
+        if (checkError || !existingProduct) {
+          console.error("❌ ProductForm: Product not found for update:", product.id);
+          throw new Error("Product not found. It may have been deleted by another user.");
+        }
+
+        // Remove updated_at from productData as it's handled by database trigger
+        const { updated_at, ...updateData } = productData;
+        
         const { data, error } = await supabase
           .from("products")
-          .update(productData)
+          .update(updateData)
           .eq("id", product.id)
-          .select()
-          .single();
+          .select();
 
         if (error) {
           console.error("❌ ProductForm: Update error:", error);
           throw error;
         }
 
-        console.log("✅ ProductForm: Update successful:", data);
-        return data;
+        if (!data || data.length === 0) {
+          throw new Error("No product was updated. The product may have been deleted.");
+        }
+
+        console.log("✅ ProductForm: Update successful:", data[0]);
+        return data[0];
       } else {
         console.log("➕ ProductForm: Creating new product");
+        
+        // Remove updated_at from productData as it's handled by database trigger
+        const { updated_at, ...insertData } = productData;
+        
         const { data, error } = await supabase
           .from("products")
-          .insert(productData)
-          .select()
-          .single();
+          .insert(insertData)
+          .select();
 
         if (error) {
           console.error("❌ ProductForm: Insert error:", error);
           throw error;
         }
 
-        console.log("✅ ProductForm: Insert successful:", data);
-        return data;
+        if (!data || data.length === 0) {
+          throw new Error("Product creation failed. No data returned.");
+        }
+
+        console.log("✅ ProductForm: Insert successful:", data[0]);
+        return data[0];
       }
     },
     onSuccess: () => {
@@ -287,8 +313,24 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
         code: error?.code
       });
 
-      // Show more specific error message
-      const errorMessage = error?.message || "Unknown error occurred";
+      // Show more specific error message based on error type
+      let errorMessage = error?.message || "Unknown error occurred";
+      
+      // Handle common constraint violations
+      if (error?.code === '23505') {
+        if (error?.message?.includes('sku')) {
+          errorMessage = "A product with this SKU already exists. Please use a different SKU or leave it empty to auto-generate.";
+        } else {
+          errorMessage = "A product with these details already exists. Please check for duplicates.";
+        }
+      } else if (error?.code === '23503') {
+        errorMessage = "Invalid category selected. Please refresh the page and try again.";
+      } else if (error?.code === '23514') {
+        errorMessage = "Invalid data provided. Please check all fields and try again.";
+      } else if (error?.message?.includes('single JSON object')) {
+        errorMessage = "Product update failed. The product may have been modified or deleted by another user. Please refresh and try again.";
+      }
+      
       alert(`Error saving product: ${errorMessage}`);
     },
   });
@@ -343,7 +385,6 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           .map((tag) => tag.trim())
           .filter(Boolean)
         : [],
-      updated_at: new Date().toISOString(),
     };
 
     console.log("📝 ProductForm: Submitting product data:", productData);
