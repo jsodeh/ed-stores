@@ -28,7 +28,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { orders } from "@/lib/supabase";
 import { Order } from "@shared/database.types";
-import { UserDebug } from "@/components/UserDebug";
+
 
 export default function Profile() {
   const { cartItemCount, favoriteProducts, cartTotal } = useStore();
@@ -59,7 +59,7 @@ export default function Profile() {
     if (!user) return;
 
     setOrdersLoading(true);
-    
+
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       setOrdersLoading(false);
@@ -69,9 +69,9 @@ export default function Profile() {
     try {
       console.log('📦 Profile: Loading user orders for:', user.id);
       const { data, error } = await orders.getUserOrders(user.id);
-      
+
       clearTimeout(timeoutId); // Clear timeout on successful response
-      
+
       if (error) {
         console.error("❌ Profile: Error loading orders:", error);
         return;
@@ -188,22 +188,22 @@ export default function Profile() {
       path: "/admin",
     });
   }
-  
+
   // Debug: Log admin status
-  console.log('🔐 Profile Page: Admin status', { 
-    isAdmin, 
+  console.log('🔐 Profile Page: Admin status', {
+    isAdmin,
     profile,
     profileRole: profile?.role,
     isSuperAdmin: profile?.role === 'super_admin',
     profileExists: !!profile,
     userExists: !!user
   });
-  
+
   // Add visual indicator for debugging
   if (isAdmin) {
     console.log('%c 🔐 ADMIN ACCESS GRANTED - Profile Page', 'background: #222; color: #bada55; font-size: 16px; padding: 5px;');
   }
-  
+
   // Additional debugging
   useEffect(() => {
     if (isAdmin) {
@@ -219,9 +219,6 @@ export default function Profile() {
       </div>
 
       <main className="max-w-4xl mx-auto p-4 pb-20 md:pb-8">
-        {/* Debug Info - Add this at the top */}
-        <UserDebug />
-        
         {/* Header */}
         <div className="flex items-center gap-3 mb-6 mt-4">
           <Button
@@ -243,11 +240,11 @@ export default function Profile() {
                 <span className="text-white text-xl font-bold">
                   {user?.user_metadata?.full_name
                     ? user.user_metadata.full_name
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)
                     : user?.email?.slice(0, 2).toUpperCase() || "U"}
                 </span>
               </div>
@@ -287,7 +284,7 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-            
+
             {/* Admin Quick Access Button */}
             {isAdmin && (
               <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
@@ -296,9 +293,9 @@ export default function Profile() {
                     <h3 className="font-semibold text-yellow-800">Admin Access</h3>
                     <p className="text-sm text-yellow-700">Quick access to admin dashboard</p>
                   </div>
-                  <Button 
-                    variant="default" 
-                    size="sm" 
+                  <Button
+                    variant="default"
+                    size="sm"
                     className="bg-yellow-500 hover:bg-yellow-600 text-white"
                     onClick={() => navigate("/admin")}
                   >

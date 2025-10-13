@@ -266,12 +266,6 @@ export default function OrderDetails() {
                       Reference: {order.payment_reference}
                     </p>
                   )}
-                  <Badge
-                    variant={order.payment_status === 'completed' ? 'default' : 'secondary'}
-                    className="mt-2"
-                  >
-                    {order.payment_status || 'Pending'}
-                  </Badge>
                 </div>
               </CardContent>
             </Card>

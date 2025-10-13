@@ -390,13 +390,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addToCartMutation.mutate({ product, quantity });
       }
     } else {
+      // Allow guest cart functionality but show info about signing in for benefits
       const existingItem = guestCart.find(item => item.productId === product.id);
       if (existingItem) {
         setGuestCart(guestCart.map(item => item.productId === product.id ? { ...item, quantity: item.quantity + quantity } : item));
       } else {
         setGuestCart([...guestCart, { productId: product.id!, quantity, product }]);
       }
-      toast({ title: "Added to cart" });
+      toast({ 
+        title: "Added to cart", 
+        description: "Sign in to sync your cart across devices and get member benefits"
+      });
     }
   };
 
@@ -433,9 +437,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Favorites actions
   const toggleFavorite = (productId: string) => {
     if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to manage favorites" });
+      toast({ 
+        title: "Sign in required", 
+        description: "Please sign in to add items to your favorites",
+        variant: "destructive"
+      });
       return;
     }
+    console.log('🤍 Toggling favorite for product:', productId, 'user:', user.id);
     toggleFavoriteMutation.mutate(productId);
   };
 
