@@ -109,13 +109,29 @@ export default function AdminOrders() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500">Loading orders...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
-    return <div className="text-red-500">Error loading orders: {error.message}</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">Error loading orders</p>
+          <p className="text-sm text-gray-500 mb-4">{error.message}</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            variant="outline"
+          >
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

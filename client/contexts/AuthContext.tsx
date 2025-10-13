@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, auth, profiles } from '@/lib/supabase';
 import { UserProfile, UserRole } from '@shared/database.types';
+import { Button } from '@/components/ui/button';
 
 interface AuthContextType {
   user: User | null;
@@ -302,8 +303,9 @@ export function AuthGuard({
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
+        console.warn('⚠️ AuthGuard: Loading timeout reached, proceeding without auth check');
         setLoadingTimeout(true);
-      }, 3000); // Reduced to 3 seconds
+      }, 5000); // 5 seconds timeout
       
       return () => clearTimeout(timer);
     } else {
@@ -316,7 +318,23 @@ export function AuthGuard({
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-gray-500">Authenticating...</p>
+          <p className="text-xs text-gray-400 mt-2">This should only take a moment</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If loading timed out, treat as unauthenticated to prevent infinite loading
+  if (loadingTimeout && requireAuth && !isAuthenticated) {
+    return fallback || (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Authentication Timeout</h2>
+          <p className="text-gray-600 mb-4">Please refresh the page and try again.</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Refresh Page
+          </Button>
         </div>
       </div>
     );

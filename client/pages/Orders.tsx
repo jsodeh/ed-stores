@@ -34,20 +34,36 @@ export default function Orders() {
     if (isAuthenticated && user) {
       loadUserOrders();
       
-      // Set up real-time subscription for order updates
+      // Set up debounced real-time subscription for order updates
+      let refreshTimeout: NodeJS.Timeout | null = null;
+      
+      const debouncedRefresh = () => {
+        if (refreshTimeout) {
+          clearTimeout(refreshTimeout);
+        }
+        
+        refreshTimeout = setTimeout(() => {
+          console.log('🔄 Debounced refresh: Reloading user orders');
+          loadUserOrders();
+        }, 2000); // Wait 2 seconds before reloading
+      };
+
       const channel = supabase
         .channel('user-orders-realtime')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` },
           (payload) => {
-            console.log('🔄 User Orders: Real-time update received:', payload);
-            loadUserOrders(); // Reload orders when changes occur
+            console.log('🔄 User Orders: Real-time update received:', payload.eventType);
+            debouncedRefresh();
           }
         )
         .subscribe();
 
       return () => {
+        if (refreshTimeout) {
+          clearTimeout(refreshTimeout);
+        }
         supabase.removeChannel(channel);
       };
     }
@@ -58,18 +74,31 @@ export default function Orders() {
 
     setLoading(true);
     setError(null);
+    
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError("Request timed out. Please try again.");
+    }, 10000); // 10 second timeout
+
     try {
+      console.log('📦 Loading user orders for:', user.id);
       const { data, error } = await orders.getUserOrders(user.id);
+      
+      clearTimeout(timeoutId); // Clear timeout on successful response
+      
       if (error) {
-        console.error("Error loading orders:", error);
+        console.error("❌ Error loading orders:", error);
         setError("Failed to load orders. Please try again later.");
         return;
       }
 
       const ordersList = data || [];
+      console.log('✅ User orders loaded successfully:', ordersList.length, 'orders');
       setUserOrders(ordersList);
     } catch (error) {
-      console.error("Error loading orders:", error);
+      clearTimeout(timeoutId); // Clear timeout on error
+      console.error("❌ Error loading orders:", error);
       setError("Failed to load orders. Please try again later.");
     } finally {
       setLoading(false);
@@ -155,7 +184,10 @@ export default function Orders() {
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-sm text-gray-500">Loading your orders...</p>
+            </div>
           </div>
         ) : userOrders.length === 0 ? (
           <Card>

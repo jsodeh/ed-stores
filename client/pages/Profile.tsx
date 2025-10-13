@@ -59,14 +59,26 @@ export default function Profile() {
     if (!user) return;
 
     setOrdersLoading(true);
+    
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setOrdersLoading(false);
+      console.warn("⚠️ Profile orders loading timed out");
+    }, 8000); // 8 second timeout for profile page
+
     try {
+      console.log('📦 Profile: Loading user orders for:', user.id);
       const { data, error } = await orders.getUserOrders(user.id);
+      
+      clearTimeout(timeoutId); // Clear timeout on successful response
+      
       if (error) {
-        console.error("Error loading orders:", error);
+        console.error("❌ Profile: Error loading orders:", error);
         return;
       }
 
       const ordersList = data || [];
+      console.log('✅ Profile: User orders loaded successfully:', ordersList.length, 'orders');
       setUserOrders(ordersList);
 
       // Calculate total spent from all delivered orders
@@ -75,7 +87,8 @@ export default function Profile() {
         .reduce((sum, order) => sum + (order.total_amount || 0), 0);
       setTotalSpent(total);
     } catch (error) {
-      console.error("Error loading orders:", error);
+      clearTimeout(timeoutId); // Clear timeout on error
+      console.error("❌ Profile: Error loading orders:", error);
     } finally {
       setOrdersLoading(false);
     }

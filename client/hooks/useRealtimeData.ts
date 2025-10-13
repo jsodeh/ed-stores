@@ -226,19 +226,20 @@ export function useAdminStats() {
           const body = await res.json();
           return { data: body.users as any[] } as const;
         })(),
-        withTimeout(supabase.from("products").select("id")),
-        withTimeout(supabase.from("orders").select("total_amount")),
+        withTimeout(supabase.from("products").select("id").then(r => r)),
+        withTimeout(supabase.from("orders").select("total_amount").then(r => r)),
         withTimeout(
           supabase
             .from("order_details")
             .select("*")
             .order("created_at", { ascending: false })
-            .limit(5),
+            .limit(5)
+            .then(r => r),
         ),
         withTimeout(
-          supabase.rpc("get_low_stock_products", { limit_count: 5 })
+          supabase.from("products").select("id, name, stock_quantity, low_stock_threshold").lt("stock_quantity", 10).limit(5).then(r => r)
         ),
-        withTimeout(supabase.from("orders").select("status")),
+        withTimeout(supabase.from("orders").select("status").then(r => r)),
       ]);
 
       const extractData = (result: any) =>
@@ -301,41 +302,59 @@ export function useAdminStats() {
   useEffect(() => {
     fetchStats();
 
-    // Set up realtime subscriptions for relevant tables
+    // Set up debounced realtime subscriptions for relevant tables
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    
+    const debouncedRefresh = () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+      
+      refreshTimeout = setTimeout(() => {
+        console.log('🔄 Debounced refresh: Updating admin stats');
+        fetchStats();
+      }, 2000); // Wait 2 seconds before refreshing stats
+    };
+
     const channels = [
       supabase
         .channel("admin-stats-users")
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "user_profiles" },
-          () => fetchStats(),
+          (payload) => {
+            console.log('🔄 User profiles changed:', payload.eventType);
+            debouncedRefresh();
+          },
         ),
       supabase
         .channel("admin-stats-products")
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "products" },
-          () => fetchStats(),
+          (payload) => {
+            console.log('🔄 Products changed:', payload.eventType);
+            debouncedRefresh();
+          },
         ),
       supabase
         .channel("admin-stats-orders")
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "orders" },
-          () => fetchStats(),
-        ),
-      supabase
-        .channel("admin-stats-order-details")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "order_details" },
-          () => fetchStats(),
+          (payload) => {
+            console.log('🔄 Orders changed:', payload.eventType);
+            debouncedRefresh();
+          },
         ),
     ];
 
     channels.forEach((channel) => channel.subscribe());
 
     return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
       channels.forEach((channel) => supabase.removeChannel(channel));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

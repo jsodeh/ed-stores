@@ -72,50 +72,128 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Data fetching using react-query
-  const { data: productsData = [], isLoading: productsLoading } = useQuery<Product[], Error>({
+  // Data fetching using react-query with optimized settings
+  const { data: productsData = [], isLoading: productsLoading, error: productsError } = useQuery<Product[], Error>({
     queryKey: ['products', selectedCategory, searchQuery],
     queryFn: async () => {
+      console.log('🛍️ Fetching products:', { selectedCategory, searchQuery });
       const { data, error } = await productsApi.getAll({ category: selectedCategory, search: searchQuery });
       if (error) throw error;
+      console.log('✅ Products fetched successfully:', data?.length, 'products');
       return data || [];
     },
-    onError: () => toast({ title: "Error", description: "Failed to load products.", variant: "destructive" }),
+    staleTime: 3 * 60 * 1000, // 3 minutes for product data
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 1500,
+    meta: {
+      errorMessage: "Failed to load products."
+    },
   });
 
-  const { data: categoriesData = [], isLoading: categoriesLoading } = useQuery<Category[], Error>({
+  const { data: categoriesData = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[], Error>({
     queryKey: ['categories'],
     queryFn: async () => {
+      console.log('📂 Fetching categories...');
       const { data, error } = await categoriesApi.getAll();
       if (error) throw error;
+      console.log('✅ Categories fetched successfully:', data?.length, 'categories');
       return data || [];
     },
-    onError: () => toast({ title: "Error", description: "Failed to load categories.", variant: "destructive" }),
+    staleTime: 5 * 60 * 1000, // 5 minutes for categories (they change less frequently)
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 1500,
+    meta: {
+      errorMessage: "Failed to load categories."
+    },
   });
 
-  const { data: cartItems = [], isLoading: cartLoading } = useQuery<CartItemWithProduct[], Error>({
+  const { data: cartItems = [], isLoading: cartLoading, error: cartError } = useQuery<CartItemWithProduct[], Error>({
     queryKey: ['cart', user?.id],
     queryFn: async () => {
       if (!user) return [];
+      console.log('🛒 Fetching cart for user:', user.id);
       const { data, error } = await cartApi.getCart(user.id);
       if (error) throw error;
+      console.log('✅ Cart fetched successfully:', data?.length, 'items');
       return (data || []) as CartItemWithProduct[];
     },
     enabled: !!user,
-    onError: () => toast({ title: "Error", description: "Failed to load cart.", variant: "destructive" }),
+    staleTime: 1 * 60 * 1000, // 1 minute for cart data (more dynamic)
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 1000,
+    meta: {
+      errorMessage: "Failed to load cart."
+    },
   });
 
-  const { data: favoriteProducts = [] } = useQuery<Product[], Error>({
+  const { data: favoriteProducts = [], error: favoritesError } = useQuery<Product[], Error>({
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       if (!user) return [];
+      console.log('❤️ Fetching favorites for user:', user.id);
       const { data, error } = await favoritesApi.getFavorites(user.id);
       if (error) throw error;
-      return data?.map((fav) => fav.products).filter(Boolean) as Product[] || [];
+      const favorites = data?.map((fav) => fav.products).filter(Boolean) as Product[] || [];
+      console.log('✅ Favorites fetched successfully:', favorites.length, 'items');
+      return favorites;
     },
     enabled: !!user,
-    onError: () => toast({ title: "Error", description: "Failed to load favorites.", variant: "destructive" }),
+    staleTime: 2 * 60 * 1000, // 2 minutes for favorites
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 1000,
+    meta: {
+      errorMessage: "Failed to load favorites."
+    },
   });
+
+  // Error handling for queries
+  useEffect(() => {
+    if (productsError) {
+      console.error('❌ Products fetch error:', productsError);
+      toast({ title: "Error", description: "Failed to load products.", variant: "destructive" });
+    }
+  }, [productsError, toast]);
+
+  useEffect(() => {
+    if (categoriesError) {
+      console.error('❌ Categories fetch error:', categoriesError);
+      toast({ title: "Error", description: "Failed to load categories.", variant: "destructive" });
+    }
+  }, [categoriesError, toast]);
+
+  useEffect(() => {
+    if (cartError) {
+      console.error('❌ Cart fetch error:', cartError);
+      toast({ title: "Error", description: "Failed to load cart.", variant: "destructive" });
+    }
+  }, [cartError, toast]);
+
+  useEffect(() => {
+    if (favoritesError) {
+      console.error('❌ Favorites fetch error:', favoritesError);
+      toast({ title: "Error", description: "Failed to load favorites.", variant: "destructive" });
+    }
+  }, [favoritesError, toast]);
 
   // Mutations
   const addToCartMutation = useMutation({ 
@@ -250,13 +328,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [guestCart, isAuthenticated]);
 
-  // Real-time subscriptions
+  // Real-time subscriptions with debouncing
   useEffect(() => {
     const channels = [];
+    let invalidationTimeout: NodeJS.Timeout | null = null;
+    
+    const debouncedInvalidate = (queryKey: string[]) => {
+      if (invalidationTimeout) {
+        clearTimeout(invalidationTimeout);
+      }
+      
+      invalidationTimeout = setTimeout(() => {
+        console.log('🔄 Debounced invalidation: Refreshing', queryKey);
+        queryClient.invalidateQueries({ queryKey });
+      }, 1500); // Wait 1.5 seconds before invalidating
+    };
+
     const productsSubscription = supabase
       .channel("products_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
-        queryClient.invalidateQueries({ queryKey: ['products'] });
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, (payload) => {
+        console.log('🔄 Products changed:', payload.eventType);
+        debouncedInvalidate(['products']);
       })
       .subscribe();
     channels.push(productsSubscription);
@@ -264,14 +356,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (user) {
       const cartSubscription = supabase
         .channel("cart_changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "cart_items", filter: `user_id=eq.${user.id}` }, () => {
-          queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
+        .on("postgres_changes", { event: "*", schema: "public", table: "cart_items", filter: `user_id=eq.${user.id}` }, (payload) => {
+          console.log('🔄 Cart changed for user:', user.id, payload.eventType);
+          debouncedInvalidate(['cart', user.id]);
         })
         .subscribe();
       channels.push(cartSubscription);
     }
 
     return () => {
+      if (invalidationTimeout) {
+        clearTimeout(invalidationTimeout);
+      }
       channels.forEach(channel => channel.unsubscribe());
     };
   }, [user, queryClient]);

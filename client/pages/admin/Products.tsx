@@ -36,21 +36,40 @@ export default function AdminProducts() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    let invalidationTimeout: NodeJS.Timeout | null = null;
+    
+    const debouncedInvalidate = () => {
+      if (invalidationTimeout) {
+        clearTimeout(invalidationTimeout);
+      }
+      
+      invalidationTimeout = setTimeout(() => {
+        console.log('🔄 Debounced invalidation: Refreshing admin products cache');
+        queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      }, 1000);
+    };
+
     const channel = supabase
       .channel('admin-products-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        console.log('🔄 Products table changed:', payload.eventType);
+        debouncedInvalidate();
       })
       .subscribe();
 
     return () => {
+      if (invalidationTimeout) {
+        clearTimeout(invalidationTimeout);
+      }
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
 
-  const { data: products = [], isPending: loading } = useQuery<Product[], Error>({
+  const { data: products = [], isPending: loading, error } = useQuery<Product[], Error>({
     queryKey: ['admin-products'],
     queryFn: async () => {
+      console.log('📦 Fetching admin products...');
+      
       const { data, error } = await supabase.from("products").select(`
         *,
         categories:category_id (
@@ -61,20 +80,32 @@ export default function AdminProducts() {
         )
       `).order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Admin products fetch error:', error);
+        throw error;
+      }
 
-      return (data || []).map(product => ({
+      const transformedData = (data || []).map(product => ({
         ...product,
         category_name: product.categories?.name || null,
         category_slug: product.categories?.slug || null,
         category_color: product.categories?.color || null,
         average_rating: 0,
         review_count: 0,
-        // Keep the original category_id, don't override it
       }));
+
+      console.log('✅ Admin products fetched successfully:', transformedData.length, 'products');
+      return transformedData;
     },
-    staleTime: 30000, // Consider data stale after 30 seconds
-    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    staleTime: 2 * 60 * 1000, // 2 minutes for admin data
+    retry: (failureCount, error) => {
+      // Don't retry on permission errors
+      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 2000,
   });
 
   // Filter products based on search query
@@ -130,7 +161,27 @@ export default function AdminProducts() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500">Loading products...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">Error loading products</p>
+          <p className="text-sm text-gray-500 mb-4">{error.message}</p>
+          <Button 
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-products'] })}
+            variant="outline"
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }

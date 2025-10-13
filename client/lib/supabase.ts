@@ -19,10 +19,15 @@ console.log('🌍 Environment variables loaded:', {
 });
 
 let supabaseInvalidApiKey = false;
+let consecutiveErrors = 0;
+let lastErrorTime = 0;
+const MAX_CONSECUTIVE_ERRORS = 5;
+const ERROR_COOLDOWN_MS = 30000; // 30 seconds
 
 function normalizeError(err: any): Error | null {
   if (!err) return null;
   if (err instanceof Error) return err;
+  
   try {
     const parts: string[] = [];
     if (err.message) parts.push(err.message);
@@ -33,6 +38,15 @@ function normalizeError(err: any): Error | null {
     const message = parts.join(' | ');
     const e = new Error(message);
     (e as any).original = err;
+    
+    // Circuit breaker pattern - track consecutive errors
+    const now = Date.now();
+    if (now - lastErrorTime > ERROR_COOLDOWN_MS) {
+      consecutiveErrors = 0; // Reset if enough time has passed
+    }
+    consecutiveErrors++;
+    lastErrorTime = now;
+    
     // Detect invalid API key messages and set flag so we can short-circuit further requests
     try {
       const lower = message.toLowerCase();
@@ -40,11 +54,26 @@ function normalizeError(err: any): Error | null {
         supabaseInvalidApiKey = true;
         console.error('🔒 Supabase invalid API key detected:', message);
       }
+      
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        console.error('🚨 Circuit breaker activated: Too many consecutive errors');
+        (e as any).circuitBreakerTripped = true;
+      }
     } catch (e) {}
     return e;
   } catch {
     return new Error(String(err));
   }
+}
+
+// Helper to check if circuit breaker is active
+function isCircuitBreakerActive(): boolean {
+  const now = Date.now();
+  if (now - lastErrorTime > ERROR_COOLDOWN_MS) {
+    consecutiveErrors = 0;
+    return false;
+  }
+  return consecutiveErrors >= MAX_CONSECUTIVE_ERRORS;
 }
 
 export { supabaseInvalidApiKey };
@@ -197,6 +226,12 @@ export const products = {
       console.error('❌ Products fetch aborted: invalid Supabase API key');
       return { data: [], error: new Error('Invalid Supabase API key configured') };
     }
+    
+    if (isCircuitBreakerActive()) {
+      console.error('❌ Products fetch aborted: circuit breaker active');
+      return { data: [], error: new Error('Service temporarily unavailable. Please try again later.') };
+    }
+    
     try {
       console.log('🔍 Fetching products from product_details view...');
       
@@ -370,6 +405,12 @@ export const categories = {
       console.error('❌ Categories fetch aborted: invalid Supabase API key');
       return { data: [], error: new Error('Invalid Supabase API key configured') };
     }
+    
+    if (isCircuitBreakerActive()) {
+      console.error('❌ Categories fetch aborted: circuit breaker active');
+      return { data: [], error: new Error('Service temporarily unavailable. Please try again later.') };
+    }
+    
     try {
       console.log('🔍 Fetching categories from categories table...');
       

@@ -33,7 +33,32 @@ import AdminNotifications from "./pages/admin/Notifications";
 import NotFound from "./pages/NotFound";
 import { AuthGuard } from "./contexts/AuthContext";
 
-const queryClient = new QueryClient();
+// Configure React Query client with optimized settings to prevent loading loops
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Prevent aggressive refetching that causes loading loops
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: true,
+      
+      // Set reasonable retry and stale time limits
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      
+      // Cache data for 5 minutes to reduce unnecessary requests
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      
+      // Add error handling to prevent infinite loading states
+      throwOnError: false,
+    },
+    mutations: {
+      retry: 1,
+      retryDelay: 1000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
