@@ -33,7 +33,7 @@ import AdminNotifications from "./pages/admin/Notifications";
 import NotFound from "./pages/NotFound";
 import { AuthGuard } from "./contexts/AuthContext";
 
-// Configure React Query client with error visibility
+// Configure React Query client for reliable data persistence
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -45,12 +45,15 @@ const queryClient = new QueryClient({
       retry: 2,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       
-      // Shorter stale time to ensure fresh data
-      staleTime: 1 * 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      // Balanced stale time for data freshness vs performance
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep data longer for better UX
       
-      // Enable error throwing to see what's actually failing
-      throwOnError: true,
+      // Handle errors gracefully to prevent data loss on reload
+      throwOnError: false,
+      
+      // Ensure queries refetch when they become enabled (important for auth-dependent queries)
+      refetchOnMount: true,
     },
     mutations: {
       retry: 1,

@@ -53,29 +53,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     
-    // Get initial session with better error handling
+    // Get initial session with better error handling and timeout
     const getInitialSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('🔄 AuthContext: Getting initial session...');
+        
+        // Add timeout to prevent hanging on session restoration
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 10000)
+        );
+        
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
         if (!mounted) return;
         
         if (error) {
           console.error('AuthContext: Session error:', error);
           // Handle refresh token errors by clearing the session
-          if (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found')) {
-            console.log('🔄 AuthContext: Clearing invalid session due to refresh token error');
+          if (error.message?.includes('Invalid Refresh Token') || 
+              error.message?.includes('Refresh Token Not Found') ||
+              error.message?.includes('Session timeout')) {
+            console.log('🔄 AuthContext: Clearing invalid/timed out session');
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
             setProfile(null);
           }
         } else {
+          console.log('✅ AuthContext: Session restored:', !!session?.user);
           setSession(session);
           setUser(session?.user ?? null);
 
           if (session?.user) {
-            await loadUserProfile(session.user.id);
+            // Load profile in background, don't block auth completion
+            loadUserProfile(session.user.id).catch(err => {
+              console.error('AuthContext: Profile load failed:', err);
+            });
           }
         }
       } catch (error) {
@@ -86,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       } finally {
         if (mounted) {
+          console.log('✅ AuthContext: Initial auth check completed');
           setLoading(false);
         }
       }
@@ -102,25 +117,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Handle specific auth events
         if (event === 'SIGNED_OUT') {
+          console.log('👋 AuthContext: User signed out');
           setSession(null);
           setUser(null);
           setProfile(null);
           setLoading(false);
         } else if (event === 'TOKEN_REFRESHED') {
+          console.log('🔄 AuthContext: Token refreshed');
           setSession(session);
           setUser(session?.user ?? null);
           // Don't reload profile on token refresh to avoid loops
           setLoading(false);
         } else if (event === 'SIGNED_IN') {
+          console.log('👋 AuthContext: User signed in');
           setSession(session);
           setUser(session?.user ?? null);
           
           if (session?.user) {
-            await loadUserProfile(session.user.id);
+            // Load profile in background, don't block auth completion
+            loadUserProfile(session.user.id).catch(err => {
+              console.error('AuthContext: Profile load failed on sign in:', err);
+            });
           }
+          setLoading(false);
+        } else if (event === 'INITIAL_SESSION') {
+          console.log('🔄 AuthContext: Initial session event');
+          // This event is handled by getInitialSession, just update state
+          setSession(session);
+          setUser(session?.user ?? null);
           setLoading(false);
         } else {
           // For other events, just update session/user without profile reload
+          console.log('🔄 AuthContext: Other auth event:', event);
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);

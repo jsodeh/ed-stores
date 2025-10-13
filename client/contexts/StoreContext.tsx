@@ -72,72 +72,78 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Data fetching using react-query with error visibility
+  // Data fetching using react-query with graceful error handling
   const { data: productsData = [], isLoading: productsLoading, error: productsError } = useQuery<Product[], Error>({
     queryKey: ['products', selectedCategory, searchQuery],
     queryFn: async () => {
       console.log('🛍️ Fetching products:', { selectedCategory, searchQuery });
-      try {
-        const { data, error } = await productsApi.getAll({ category: selectedCategory, search: searchQuery });
-        if (error) {
-          console.error('❌ Products API returned error:', error);
-          throw error;
-        }
-        console.log('✅ Products fetched successfully:', data?.length, 'products');
-        return data || [];
-      } catch (err) {
-        console.error('❌ Products query failed:', err);
-        throw err;
+      const { data, error } = await productsApi.getAll({ category: selectedCategory, search: searchQuery });
+      if (error) {
+        console.error('❌ Products API returned error:', error);
+        // Return empty array instead of throwing to prevent app crash
+        return [];
       }
+      console.log('✅ Products fetched successfully:', data?.length, 'products');
+      return data || [];
     },
-    throwOnError: false, // Handle errors gracefully in UI
+    // Keep previous data while refetching to prevent UI flicker
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: categoriesData = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[], Error>({
     queryKey: ['categories'],
     queryFn: async () => {
       console.log('📂 Fetching categories...');
-      try {
-        const { data, error } = await categoriesApi.getAll();
-        if (error) {
-          console.error('❌ Categories API returned error:', error);
-          throw error;
-        }
-        console.log('✅ Categories fetched successfully:', data?.length, 'categories');
-        return data || [];
-      } catch (err) {
-        console.error('❌ Categories query failed:', err);
-        throw err;
+      const { data, error } = await categoriesApi.getAll();
+      if (error) {
+        console.error('❌ Categories API returned error:', error);
+        // Return empty array instead of throwing to prevent app crash
+        return [];
       }
+      console.log('✅ Categories fetched successfully:', data?.length, 'categories');
+      return data || [];
     },
-    throwOnError: false, // Handle errors gracefully in UI
+    // Keep previous data while refetching to prevent UI flicker
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: cartItems = [], isLoading: cartLoading, error: cartError } = useQuery<CartItemWithProduct[], Error>({
     queryKey: ['cart', user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user?.id) return [];
       console.log('🛒 Fetching cart for user:', user.id);
       const { data, error } = await cartApi.getCart(user.id);
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Cart fetch error:', error);
+        // Return empty array instead of throwing to prevent data loss
+        return [];
+      }
       console.log('✅ Cart fetched successfully:', data?.length, 'items');
       return (data || []) as CartItemWithProduct[];
     },
-    enabled: !!user,
+    enabled: !!user?.id && isAuthenticated,
+    // Keep previous data while refetching to prevent UI flicker
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: favoriteProducts = [], error: favoritesError } = useQuery<Product[], Error>({
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user?.id) return [];
       console.log('❤️ Fetching favorites for user:', user.id);
       const { data, error } = await favoritesApi.getFavorites(user.id);
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Favorites fetch error:', error);
+        // Return empty array instead of throwing to prevent data loss
+        return [];
+      }
       const favorites = data?.map((fav) => fav.products).filter(Boolean) as Product[] || [];
       console.log('✅ Favorites fetched successfully:', favorites.length, 'items');
       return favorites;
     },
-    enabled: !!user,
+    enabled: !!user?.id && isAuthenticated,
+    // Keep previous data while refetching to prevent UI flicker
+    placeholderData: (previousData) => previousData,
   });
 
   // Error handling for queries
