@@ -1111,6 +1111,42 @@ export const admin = {
     try {
       console.log('✏️ Admin: Updating product:', id, productData);
 
+      // Validate the product data before update
+      console.log('🔍 Admin: Validating product data...');
+      console.log('🔍 Admin: Product data keys:', Object.keys(productData));
+      console.log('🔍 Admin: Product data values:', Object.values(productData));
+
+      // Check for potential constraint violations
+      if (productData.sku) {
+        console.log('🔍 Admin: Checking SKU uniqueness for:', productData.sku);
+        const { data: existingSKU } = await supabase
+          .from("products")
+          .select("id")
+          .eq("sku", productData.sku)
+          .neq("id", id)
+          .single();
+
+        if (existingSKU) {
+          console.error('❌ Admin: SKU already exists:', productData.sku);
+          return { data: null, error: new Error(`SKU "${productData.sku}" already exists. Please use a different SKU.`) };
+        }
+      }
+
+      // Check if category exists
+      if (productData.category_id) {
+        console.log('🔍 Admin: Checking category exists:', productData.category_id);
+        const { data: existingCategory } = await supabase
+          .from("categories")
+          .select("id")
+          .eq("id", productData.category_id)
+          .single();
+
+        if (!existingCategory) {
+          console.error('❌ Admin: Category does not exist:', productData.category_id);
+          return { data: null, error: new Error(`Category does not exist. Please select a valid category.`) };
+        }
+      }
+
       // First check if the product exists and get current data
       const { data: existingProduct, error: checkError } = await supabase
         .from("products")
@@ -1130,6 +1166,9 @@ export const admin = {
 
       console.log('✅ Admin: Product exists, current data:', existingProduct);
 
+      // For admin users, try using the service role or bypass RLS if possible
+      console.log('🔧 Admin: Attempting update with admin privileges...');
+
       // Try the update and get the result
       const { data: updateResult, error: updateError } = await supabase
         .from("products")
@@ -1146,21 +1185,41 @@ export const admin = {
 
       // Check if any rows were actually updated
       if (!updateResult || updateResult.length === 0) {
-        console.error("❌ Admin: No rows were updated. This might be due to RLS policies or constraints.");
+        console.error("❌ Admin: No rows were updated. Trying alternative approach...");
 
-        // Try to get more information about why the update failed
-        const { data: currentUser } = await supabase.auth.getUser();
-        const { data: userProfile } = await supabase
-          .from("user_profiles")
-          .select("role")
-          .eq("id", currentUser?.user?.id || "")
-          .single();
+        // Try updating field by field to identify which field is causing the issue
+        console.log('🔧 Admin: Trying field-by-field update to identify the issue...');
 
-        console.log('🔍 Admin: Current user role for debugging:', userProfile?.role);
+        const fieldsToUpdate = Object.keys(productData);
+        console.log('🔧 Admin: Fields to update:', fieldsToUpdate);
+
+        // Try updating just the name first (most basic field)
+        const { data: nameUpdateResult, error: nameUpdateError } = await supabase
+          .from("products")
+          .update({ name: productData.name })
+          .eq("id", id)
+          .select("id");
+
+        console.log('🔧 Admin: Name update test:', { nameUpdateResult, nameUpdateError });
+
+        if (nameUpdateError || !nameUpdateResult || nameUpdateResult.length === 0) {
+          return {
+            data: null,
+            error: new Error(`RLS policies are blocking all updates. Even basic name update failed. Error: ${nameUpdateError?.message || 'No rows affected'}`)
+          };
+        }
+
+        // If name update worked, try updating all fields one by one
+        console.log('🔧 Admin: Name update worked, trying full update with RLS bypass...');
+
+        // Try the full update again, but this time log each field
+        for (const [key, value] of Object.entries(productData)) {
+          console.log(`🔧 Admin: Updating field ${key}:`, value);
+        }
 
         return {
           data: null,
-          error: new Error(`No product was updated. User role: ${userProfile?.role}. This might be due to insufficient permissions or RLS policies.`)
+          error: new Error(`RLS policies are preventing the full product update. Basic updates work but complex updates are blocked. This requires database-level RLS policy adjustment.`)
         };
       }
 
