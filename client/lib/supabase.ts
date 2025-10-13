@@ -1111,22 +1111,62 @@ export const admin = {
     try {
       console.log('✏️ Admin: Updating product:', id, productData);
 
-      // First check if the product exists
+      // First check if the product exists and get current data
       const { data: existingProduct, error: checkError } = await supabase
         .from("products")
-        .select("id")
+        .select("*")
         .eq("id", id)
         .single();
 
-      if (checkError || !existingProduct) {
+      if (checkError) {
+        console.error("❌ Admin: Error checking product existence:", checkError);
+        return { data: null, error: normalizeError(checkError) };
+      }
+
+      if (!existingProduct) {
         console.error("❌ Admin: Product not found for update:", id);
         return { data: null, error: new Error("Product not found. It may have been deleted by another user.") };
       }
 
-      const { data, error } = await supabase
+      console.log('✅ Admin: Product exists, current data:', existingProduct);
+
+      // Try the update and get the result
+      const { data: updateResult, error: updateError } = await supabase
         .from("products")
         .update(productData)
         .eq("id", id)
+        .select("id");
+
+      console.log('🔍 Admin: Update result:', { updateResult, updateError, affectedRows: updateResult?.length });
+
+      if (updateError) {
+        console.error("❌ Admin product update error:", updateError);
+        return { data: null, error: normalizeError(updateError) };
+      }
+
+      // Check if any rows were actually updated
+      if (!updateResult || updateResult.length === 0) {
+        console.error("❌ Admin: No rows were updated. This might be due to RLS policies or constraints.");
+
+        // Try to get more information about why the update failed
+        const { data: currentUser } = await supabase.auth.getUser();
+        const { data: userProfile } = await supabase
+          .from("user_profiles")
+          .select("role")
+          .eq("id", currentUser?.user?.id || "")
+          .single();
+
+        console.log('🔍 Admin: Current user role for debugging:', userProfile?.role);
+
+        return {
+          data: null,
+          error: new Error(`No product was updated. User role: ${userProfile?.role}. This might be due to insufficient permissions or RLS policies.`)
+        };
+      }
+
+      // Now fetch the updated product with relationships
+      const { data: updatedProduct, error: fetchError } = await supabase
+        .from("products")
         .select(`
           *,
           categories:category_id (
@@ -1135,23 +1175,25 @@ export const admin = {
             slug,
             color
           )
-        `);
+        `)
+        .eq("id", id)
+        .single();
 
-      if (error) {
-        console.error("❌ Admin product update error:", error);
-        return { data: null, error: normalizeError(error) };
+      if (fetchError) {
+        console.error("❌ Admin: Error fetching updated product:", fetchError);
+        return { data: null, error: normalizeError(fetchError) };
       }
 
-      if (!data || data.length === 0) {
-        return { data: null, error: new Error("No product was updated. The product may have been deleted.") };
+      if (!updatedProduct) {
+        return { data: null, error: new Error("Product was updated but could not be retrieved.") };
       }
 
       // Transform data to match expected structure
       const transformedData = {
-        ...data[0],
-        category_name: data[0].categories?.name || null,
-        category_slug: data[0].categories?.slug || null,
-        category_color: data[0].categories?.color || null,
+        ...updatedProduct,
+        category_name: updatedProduct.categories?.name || null,
+        category_slug: updatedProduct.categories?.slug || null,
+        category_color: updatedProduct.categories?.color || null,
         average_rating: 0,
         review_count: 0,
       };
@@ -1184,6 +1226,65 @@ export const admin = {
     } catch (err) {
       console.error("❌ Admin product deletion error:", err);
       return { data: null, error: normalizeError(err) };
+    }
+  },
+
+  // Test database connection and permissions
+  testConnection: async () => {
+    try {
+      console.log('🔍 Admin: Testing database connection and permissions...');
+
+      // Test 1: Basic read access
+      const { data: products, error: readError } = await supabase
+        .from("products")
+        .select("id, name")
+        .limit(1);
+
+      console.log('📖 Admin: Read test result:', { products, readError });
+
+      if (readError) {
+        return { success: false, error: `Read test failed: ${readError.message}` };
+      }
+
+      // Test 2: Get current user and role
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('👤 Admin: Current user:', user?.id);
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        console.log('🔐 Admin: User role:', profile?.role);
+
+        if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+          return { success: false, error: `Insufficient permissions. User role: ${profile?.role}` };
+        }
+      }
+
+      // Test 3: Try a simple update on the first product
+      if (products && products.length > 0) {
+        const testProductId = products[0].id;
+        console.log('✏️ Admin: Testing update on product:', testProductId);
+
+        const { data: updateResult, error: updateError } = await supabase
+          .from("products")
+          .update({ updated_at: new Date().toISOString() })
+          .eq("id", testProductId);
+
+        console.log('✏️ Admin: Update test result:', { updateResult, updateError });
+
+        if (updateError) {
+          return { success: false, error: `Update test failed: ${updateError.message}` };
+        }
+      }
+
+      return { success: true, message: 'All tests passed' };
+    } catch (err) {
+      console.error("❌ Admin: Connection test error:", err);
+      return { success: false, error: `Connection test failed: ${err}` };
     }
   },
 

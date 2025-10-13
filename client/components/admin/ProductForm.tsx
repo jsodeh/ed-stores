@@ -640,6 +640,16 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
                 </>
               )}
             </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={async () => {
+                const result = await admin.testConnection();
+                alert(result.success ? `✅ ${result.message}` : `❌ ${result.error}`);
+              }}
+            >
+              Test DB
+            </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
