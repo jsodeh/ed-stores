@@ -787,9 +787,55 @@ export const orders = {
   
   // Update order status (for admin)
   updateOrderStatus: async (orderId: string, status: Database["public"]["Enums"]["order_status"]) => {
+    // Determine payment status based on order status
+    let paymentStatus = null;
+    
+    switch (status) {
+      case 'confirmed':
+      case 'processing':
+      case 'shipped':
+      case 'delivered':
+        // When admin confirms order, it means payment has been received
+        paymentStatus = 'completed';
+        break;
+      case 'cancelled':
+        paymentStatus = 'failed';
+        break;
+      case 'pending':
+        paymentStatus = 'pending';
+        break;
+      default:
+        paymentStatus = 'pending';
+    }
+
+    // If cancelling order, restore inventory using stored procedure
+    if (status === 'cancelled') {
+      try {
+        // Call the stored procedure to restore inventory
+        // Note: This procedure needs to be created in the database
+        const { error: restoreError } = await supabase.rpc('restore_order_inventory' as any, {
+          p_order_id: orderId
+        });
+        
+        if (restoreError) {
+          console.error('Error restoring inventory for cancelled order:', restoreError);
+          // Don't fail the status update if inventory restoration fails
+        }
+      } catch (error) {
+        console.error('Error calling restore_order_inventory procedure:', error);
+        // Don't fail the status update if inventory restoration fails
+      }
+    }
+
+    const updateData: any = { 
+      status: status as any,
+      payment_status: paymentStatus,
+      updated_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from("orders")
-      .update({ status: status as any })
+      .update(updateData)
       .eq("id", orderId)
       .select()
       .single();

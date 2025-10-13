@@ -6,25 +6,16 @@ export function useAdminUsers() {
   return useQuery<UserProfile[], Error>({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const {
-        data: { session },
-        error: sessionErr,
-      } = await supabase.auth.getSession();
-      if (sessionErr || !session?.access_token) {
-        throw new Error("Not authenticated");
-      }
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id, full_name, email, phone, role, created_at")
+        .order("created_at", { ascending: false });
 
-      const res = await fetch("/api/admin/users", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Request failed (${res.status})`);
-      }
-      const body = (await res.json()) as { users: UserProfile[] };
-      return body.users || [];
+      if (error) throw error;
+
+      return data || [];
     },
+    staleTime: 30000, // Consider data stale after 30 seconds
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
 }

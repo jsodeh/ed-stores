@@ -48,7 +48,7 @@ export default function AdminProducts() {
     };
   }, [queryClient]);
 
-  const { data: products = [], isLoading: loading } = useQuery<Product[], Error>({
+  const { data: products = [], isPending: loading } = useQuery<Product[], Error>({
     queryKey: ['admin-products'],
     queryFn: async () => {
       const { data, error } = await supabase.from("products").select(`
@@ -70,7 +70,7 @@ export default function AdminProducts() {
         category_color: product.categories?.color || null,
         average_rating: 0,
         review_count: 0,
-        category_id: product.category_id || product.categories?.id || null,
+        // Keep the original category_id, don't override it
       }));
     },
     staleTime: 30000, // Consider data stale after 30 seconds
@@ -84,7 +84,10 @@ export default function AdminProducts() {
   );
 
   const deleteProductMutation = useMutation({
-    mutationFn: (productId: string) => supabase.from("products").delete().eq("id", productId),
+    mutationFn: async (productId: string) => {
+      const { error } = await supabase.from("products").delete().eq("id", productId);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       setDeletingProduct(null);

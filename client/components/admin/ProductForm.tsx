@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { Product, Category } from "@shared/database.types";
-import { X, Save, Loader2, Upload, Image as ImageIcon } from "lucide-react";
+import { X, Save, Loader2, Upload } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProductFormProps {
@@ -45,8 +45,18 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
   useEffect(() => {
     loadCategories();
-    if (product) {
+  }, []);
+
+  useEffect(() => {
+    if (product && categories.length > 0) {
       console.log('📝 ProductForm: Initializing form with product data:', product);
+      console.log('📝 ProductForm: Product category_id:', product.category_id);
+      console.log('📝 ProductForm: Categories available:', categories.length);
+
+      // Verify the category exists in the loaded categories
+      const categoryExists = categories.find(cat => cat.id === product.category_id);
+      console.log('📝 ProductForm: Category exists in list:', !!categoryExists, categoryExists);
+
       const initialFormData = {
         name: product.name || "",
         description: product.description || "",
@@ -62,9 +72,33 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
         tags: product.tags?.join(", ") || "",
       };
       console.log('📝 ProductForm: Initial form data:', initialFormData);
+      console.log('📝 ProductForm: Setting category_id to:', initialFormData.category_id);
       setFormData(initialFormData);
+    } else if (!product) {
+      // Reset form for new product
+      setFormData({
+        name: "",
+        description: "",
+        price: "",
+        category_id: "",
+        sku: "",
+        stock_quantity: "",
+        low_stock_threshold: "10",
+        is_active: true,
+        is_featured: false,
+        image_url: "",
+        weight: "",
+        tags: "",
+      });
     }
-  }, [product]);
+  }, [product, categories]);
+
+  // Debug form data changes
+  useEffect(() => {
+    console.log('📝 ProductForm: Form data changed:', formData);
+    console.log('📝 ProductForm: Current category_id:', formData.category_id);
+    console.log('📝 ProductForm: Available categories:', categories.map(c => ({ id: c.id, name: c.name })));
+  }, [formData, categories]);
 
   const loadCategories = async () => {
     console.log('📂 ProductForm: Loading categories...');
@@ -74,6 +108,7 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
       .eq("is_active", true)
       .order("sort_order");
     console.log('📂 ProductForm: Categories loaded:', data?.length || 0);
+    console.log('📂 ProductForm: Categories data:', data);
     setCategories(data || []);
   };
 
@@ -93,17 +128,17 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
       setUploading(true);
-      console.log('🖼️ ProductForm: Starting image upload...', { 
-        fileName: file.name, 
-        fileSize: file.size, 
-        fileType: file.type 
+      console.log('🖼️ ProductForm: Starting image upload...', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
       });
-      
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      
+
       console.log('📤 ProductForm: Uploading file to storage...', { fileName });
-      
+
       // Upload directly since bucket exists
       const { data, error } = await supabase.storage
         .from('product-images')
@@ -114,32 +149,32 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
       if (error) {
         console.error('❌ ProductForm: Supabase storage upload error:', error);
-        
+
         if (error.message?.includes('row-level security') || error.message?.includes('permission')) {
           alert('Storage permissions not configured. Please run the setup-storage-policies.sql script in your Supabase SQL Editor, then try again. You can also enter the image URL manually below.');
         } else if (error.message?.includes('duplicate')) {
           // File already exists, try with a different name
           const newFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-retry.${fileExt}`;
           console.log('🔄 ProductForm: File exists, retrying with new name:', newFileName);
-          
-          const { data: retryData, error: retryError } = await supabase.storage
+
+          const { error: retryError } = await supabase.storage
             .from('product-images')
             .upload(newFileName, file, {
               cacheControl: '3600',
               upsert: false
             });
-            
+
           if (retryError) {
             console.error('❌ ProductForm: Retry upload failed:', retryError);
             alert(`Error uploading image: ${retryError.message}. You can enter the image URL manually below.`);
             return null;
           }
-          
+
           // Get public URL for retry
           const { data: { publicUrl } } = supabase.storage
             .from('product-images')
             .getPublicUrl(newFileName);
-            
+
           console.log('✅ ProductForm: Retry upload successful, public URL:', publicUrl);
           return publicUrl;
         } else {
@@ -149,7 +184,7 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
       }
 
       console.log('✅ ProductForm: Upload successful, getting public URL...', { data });
-      
+
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
@@ -170,10 +205,10 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    console.log('File selected for upload:', { 
-      name: file.name, 
-      size: file.size, 
-      type: file.type 
+    console.log('File selected for upload:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
     });
 
     // Validate file type
@@ -204,22 +239,38 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (productData: any) => {
+      console.log("🔄 ProductForm: Starting mutation...", { isEdit: !!product, productData });
+
       if (product) {
+        console.log("✏️ ProductForm: Updating existing product:", product.id);
         const { data, error } = await supabase
           .from("products")
           .update(productData)
           .eq("id", product.id)
           .select()
           .single();
-        if (error) throw error;
+
+        if (error) {
+          console.error("❌ ProductForm: Update error:", error);
+          throw error;
+        }
+
+        console.log("✅ ProductForm: Update successful:", data);
         return data;
       } else {
+        console.log("➕ ProductForm: Creating new product");
         const { data, error } = await supabase
           .from("products")
           .insert(productData)
           .select()
           .single();
-        if (error) throw error;
+
+        if (error) {
+          console.error("❌ ProductForm: Insert error:", error);
+          throw error;
+        }
+
+        console.log("✅ ProductForm: Insert successful:", data);
         return data;
       }
     },
@@ -227,34 +278,79 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       onSave();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error saving product:", error);
-      alert("Error saving product. Please try again.");
+      console.error("Error details:", {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code
+      });
+
+      // Show more specific error message
+      const errorMessage = error?.message || "Unknown error occurred";
+      alert(`Error saving product: ${errorMessage}`);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!formData.name.trim()) {
+      alert("Product name is required");
+      return;
+    }
+
+    if (!formData.category_id) {
+      alert("Please select a category");
+      return;
+    }
+
+    // Validate category exists
+    const selectedCategory = categories.find(cat => cat.id === formData.category_id);
+    if (!selectedCategory) {
+      alert("Selected category is invalid. Please select a valid category.");
+      return;
+    }
+
+    if (!formData.price || isNaN(parseFloat(formData.price))) {
+      alert("Please enter a valid price");
+      return;
+    }
+
+    const priceValue = parseFloat(formData.price);
+    if (priceValue <= 0) {
+      alert("Price must be greater than 0");
+      return;
+    }
+
     const productData = {
-      name: formData.name,
-      description: formData.description || null,
+      name: formData.name.trim(),
+      description: formData.description?.trim() || null,
       price: parseFloat(formData.price),
       category_id: formData.category_id,
-      sku: formData.sku,
+      sku: formData.sku?.trim() || null,
       stock_quantity: parseInt(formData.stock_quantity) || 0,
       low_stock_threshold: parseInt(formData.low_stock_threshold) || 10,
       is_active: formData.is_active,
       is_featured: formData.is_featured,
-      image_url: formData.image_url || null,
+      image_url: formData.image_url?.trim() || null,
       weight: formData.weight ? parseFloat(formData.weight) : null,
       tags: formData.tags
         ? formData.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean)
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
         : [],
       updated_at: new Date().toISOString(),
     };
+
+    console.log("📝 ProductForm: Submitting product data:", productData);
+    console.log("📝 ProductForm: Form data before processing:", formData);
+    console.log("📝 ProductForm: Selected category:", selectedCategory);
+    console.log("📝 ProductForm: Product being edited:", product);
+
     mutation.mutate(productData);
   };
 
@@ -287,9 +383,10 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
               <Label htmlFor="category">Category *</Label>
               <Select
                 value={formData.category_id}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, category_id: value }))
-                }
+                onValueChange={(value) => {
+                  console.log('📝 ProductForm: Category changed to:', value);
+                  setFormData((prev) => ({ ...prev, category_id: value }));
+                }}
                 required
               >
                 <SelectTrigger>
@@ -421,7 +518,7 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
                   </Button>
                 </div>
               )}
-              
+
               {/* Upload Button */}
               <div className="flex items-center gap-2">
                 <Button
@@ -463,7 +560,7 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
                 Supports JPG, PNG, GIF up to 5MB
               </p>
             </div>
-            
+
             {/* Fallback URL input (hidden by default but can be shown if needed) */}
             <div className="mt-2">
               <Label htmlFor="image_url" className="text-sm font-medium">
@@ -521,8 +618,8 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={mutation.isLoading || uploading} className="flex-1">
-              {mutation.isLoading ? (
+            <Button type="submit" disabled={mutation.isPending || uploading} className="flex-1">
+              {mutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving...

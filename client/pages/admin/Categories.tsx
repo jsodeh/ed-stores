@@ -38,7 +38,7 @@ export default function AdminCategories() {
   );
   const queryClient = useQueryClient();
 
-  const { data: categories = [], isLoading: loading } = useQuery<Category[], Error>({
+  const { data: categories = [], isPending: loading } = useQuery<Category[], Error>({
     queryKey: ['admin-categories'],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("*").order("sort_order", { ascending: true });

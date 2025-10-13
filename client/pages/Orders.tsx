@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { orders } from "@/lib/supabase";
+import { orders, supabase } from "@/lib/supabase";
 import { Order } from "@shared/database.types";
 import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock } from "lucide-react";
 
@@ -33,6 +33,23 @@ export default function Orders() {
   useEffect(() => {
     if (isAuthenticated && user) {
       loadUserOrders();
+      
+      // Set up real-time subscription for order updates
+      const channel = supabase
+        .channel('user-orders-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            console.log('🔄 User Orders: Real-time update received:', payload);
+            loadUserOrders(); // Reload orders when changes occur
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isAuthenticated, user]);
 

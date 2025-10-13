@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
-import { orders } from "@/lib/supabase";
+import { orders, supabase } from "@/lib/supabase";
 import { Order } from "@shared/database.types";
 import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, MapPin, Phone } from "lucide-react";
 
@@ -35,6 +35,23 @@ export default function OrderDetails() {
   useEffect(() => {
     if (isAuthenticated && user && orderId) {
       loadOrderDetails();
+
+      // Set up real-time subscription for this specific order
+      const channel = supabase
+        .channel('user-order-details-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
+          (payload) => {
+            console.log('🔄 User Order Details: Real-time update received:', payload);
+            loadOrderDetails(); // Reload order details when changes occur
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isAuthenticated, user, orderId]);
 
@@ -201,7 +218,7 @@ export default function OrderDetails() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h3 className="font-medium text-gray-900 mb-3">Order Summary</h3>
                     <div className="space-y-2">
@@ -233,15 +250,15 @@ export default function OrderDetails() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-6 pt-4 border-t">
                   <h3 className="font-medium text-gray-900 mb-3">Payment Method</h3>
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4 text-gray-500" />
                     <span className="capitalize">
-                      {order.payment_method === 'transfer' ? 'Bank Transfer' : 
-                       order.payment_method === 'cash' ? 'Cash on Pickup' : 
-                       order.payment_method || 'N/A'}
+                      {order.payment_method === 'transfer' ? 'Bank Transfer' :
+                        order.payment_method === 'cash' ? 'Cash on Pickup' :
+                          order.payment_method || 'N/A'}
                     </span>
                   </div>
                   {order.payment_reference && (
@@ -249,7 +266,7 @@ export default function OrderDetails() {
                       Reference: {order.payment_reference}
                     </p>
                   )}
-                  <Badge 
+                  <Badge
                     variant={order.payment_status === 'completed' ? 'default' : 'secondary'}
                     className="mt-2"
                   >
@@ -303,14 +320,14 @@ export default function OrderDetails() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => navigate("/orders")}
               >
                 Back to Orders
               </Button>
-              <Button 
+              <Button
                 className="flex-1 bg-primary hover:bg-primary/90"
                 onClick={() => navigate("/store")}
               >

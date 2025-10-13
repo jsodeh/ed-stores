@@ -16,7 +16,7 @@ import {
 
 export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: users = [], isLoading: loading, error } = useAdminUsers();
+  const { data: users = [], isPending: loading, error } = useAdminUsers();
 
   const filteredUsers = users.filter(user =>
     user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||

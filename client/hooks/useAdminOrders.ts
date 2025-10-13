@@ -12,9 +12,9 @@ export function useAdminOrders() {
       .channel('admin-orders-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'order_details' },
+        { event: '*', schema: 'public', table: 'order_items' },
         (payload) => {
-          console.log('🔄 Order details changed, invalidating admin orders cache:', payload);
+          console.log('🔄 Order items changed, invalidating admin orders cache:', payload);
           queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
         }
       )
@@ -33,22 +33,17 @@ export function useAdminOrders() {
     };
   }, [queryClient]);
 
-  return useQuery<Order[], Error>({
+  return useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("order_details")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      const res = await fetch("/api/admin/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Request failed (${res.status})`);
-      }
-      const body = (await res.json()) as { orders: Order[] };
-      return body.orders || [];
+      if (error) throw error;
+
+      return data || [];
     },
     refetchOnWindowFocus: true, // Refetch when admin returns to the tab
     staleTime: 30000, // Consider data stale after 30 seconds

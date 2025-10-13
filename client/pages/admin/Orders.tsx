@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AdminPage } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +24,7 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showNewOrderAlert, setShowNewOrderAlert] = useState(false);
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
-  const { data: orders = [], isLoading: loading, error } = useAdminOrders();
+  const { data: orders = [], isPending: loading, error } = useAdminOrders();
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -109,20 +108,14 @@ export default function AdminOrders() {
 
   if (loading) {
     return (
-      <AdminPage title="Orders Management">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </AdminPage>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   if (error) {
-    return (
-      <AdminPage title="Orders Management">
-        <div className="text-red-500">Error loading orders: {error.message}</div>
-      </AdminPage>
-    );
+    return <div className="text-red-500">Error loading orders: {error.message}</div>;
   }
 
   return (
