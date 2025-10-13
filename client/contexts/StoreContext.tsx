@@ -127,7 +127,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.log('✅ Cart fetched successfully:', data?.length, 'items');
       return (data || []) as CartItemWithProduct[];
     },
-    enabled: !!user,
+    enabled: !!user && !!user.id, // More specific check
     staleTime: 1 * 60 * 1000, // 1 minute for cart data (more dynamic)
     retry: (failureCount, error) => {
       if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
@@ -136,6 +136,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return failureCount < 2;
     },
     retryDelay: 1000,
+    refetchOnMount: false, // Prevent refetch on component mount
+    refetchOnReconnect: false, // Prevent refetch on reconnect
     meta: {
       errorMessage: "Failed to load cart."
     },
@@ -152,7 +154,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.log('✅ Favorites fetched successfully:', favorites.length, 'items');
       return favorites;
     },
-    enabled: !!user,
+    enabled: !!user && !!user.id, // More specific check
     staleTime: 2 * 60 * 1000, // 2 minutes for favorites
     retry: (failureCount, error) => {
       if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
@@ -161,6 +163,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return failureCount < 2;
     },
     retryDelay: 1000,
+    refetchOnMount: false, // Prevent refetch on component mount
+    refetchOnReconnect: false, // Prevent refetch on reconnect
     meta: {
       errorMessage: "Failed to load favorites."
     },
@@ -248,79 +252,91 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Migrate guest cart to authenticated cart when user logs in
   useEffect(() => {
+    let migrationInProgress = false;
+    
     const migrateGuestCart = async () => {
-      if (isAuthenticated && user && guestCart.length > 0) {
-        console.log('🔄 Migrating guest cart to authenticated cart:', guestCart);
+      if (migrationInProgress || !isAuthenticated || !user?.id || guestCart.length === 0) {
+        return;
+      }
+      
+      migrationInProgress = true;
+      console.log('🔄 Migrating guest cart to authenticated cart:', guestCart);
+      
+      try {
+        const migrationResults = [];
+        let successCount = 0;
+        let failureCount = 0;
         
-        try {
-          const migrationResults = [];
-          let successCount = 0;
-          let failureCount = 0;
-          
-          // Migrate each guest cart item to the authenticated cart
-          for (const guestItem of guestCart) {
-            if (guestItem.product) {
-              try {
-                await cartApi.addItem(user.id, guestItem.productId, guestItem.quantity);
-                successCount++;
-                migrationResults.push({ success: true, product: guestItem.product.name });
-              } catch (error) {
-                failureCount++;
-                migrationResults.push({ 
-                  success: false, 
-                  product: guestItem.product.name, 
-                  error: error 
-                });
-                console.error(`Failed to migrate item ${guestItem.product.name}:`, error);
-              }
+        // Migrate each guest cart item to the authenticated cart
+        for (const guestItem of guestCart) {
+          if (guestItem.product) {
+            try {
+              await cartApi.addItem(user.id, guestItem.productId, guestItem.quantity);
+              successCount++;
+              migrationResults.push({ success: true, product: guestItem.product.name });
+            } catch (error) {
+              failureCount++;
+              migrationResults.push({ 
+                success: false, 
+                product: guestItem.product.name, 
+                error: error 
+              });
+              console.error(`Failed to migrate item ${guestItem.product.name}:`, error);
             }
           }
-          
-          // Clear guest cart after migration attempt (regardless of individual failures)
-          setGuestCart([]);
-          localStorage.removeItem("guestCart");
-          
-          // Invalidate cart query to refresh the authenticated cart
-          queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
-          
-          // Show appropriate toast message based on results
-          if (successCount === guestCart.length) {
-            console.log('✅ Guest cart migration completed successfully');
-            toast({ 
-              title: "Cart synced", 
-              description: `${successCount} item(s) added to your cart.` 
-            });
-          } else if (successCount > 0) {
-            console.log('⚠️ Guest cart migration partially completed');
-            toast({ 
-              title: "Cart partially synced", 
-              description: `${successCount} item(s) added, ${failureCount} failed. Please try adding failed items again.`,
-              variant: "destructive"
-            });
-          } else {
-            console.log('❌ Guest cart migration completely failed');
-            toast({ 
-              title: "Cart sync failed", 
-              description: "Could not sync your cart items. Please try adding them again.",
-              variant: "destructive" 
-            });
-          }
-        } catch (error) {
-          console.error('❌ Guest cart migration failed:', error);
+        }
+        
+        // Clear guest cart after migration attempt (regardless of individual failures)
+        setGuestCart([]);
+        localStorage.removeItem("guestCart");
+        
+        // Invalidate cart query to refresh the authenticated cart
+        queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
+        
+        // Show appropriate toast message based on results
+        if (successCount === guestCart.length) {
+          console.log('✅ Guest cart migration completed successfully');
+          toast({ 
+            title: "Cart synced", 
+            description: `${successCount} item(s) added to your cart.` 
+          });
+        } else if (successCount > 0) {
+          console.log('⚠️ Guest cart migration partially completed');
+          toast({ 
+            title: "Cart partially synced", 
+            description: `${successCount} item(s) added, ${failureCount} failed. Please try adding failed items again.`,
+            variant: "destructive"
+          });
+        } else {
+          console.log('❌ Guest cart migration completely failed');
           toast({ 
             title: "Cart sync failed", 
-            description: "Could not sync your guest cart items. Please try adding them again.",
+            description: "Could not sync your cart items. Please try adding them again.",
             variant: "destructive" 
           });
         }
+      } catch (error) {
+        console.error('❌ Guest cart migration failed:', error);
+        toast({ 
+          title: "Cart sync failed", 
+          description: "Could not sync your guest cart items. Please try adding them again.",
+          variant: "destructive" 
+        });
+      } finally {
+        migrationInProgress = false;
       }
     };
 
-    // Only run migration once when user becomes authenticated
-    if (isAuthenticated && user) {
-      migrateGuestCart();
+    // Only run migration once when user becomes authenticated and has a stable user ID
+    if (isAuthenticated && user?.id && guestCart.length > 0) {
+      // Add a small delay to ensure auth state is stable
+      const timeoutId = setTimeout(() => {
+        migrateGuestCart();
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [isAuthenticated, user, queryClient]);
+  }, [isAuthenticated, user?.id]); // Remove queryClient from dependencies
 
   useEffect(() => {
     if (!isAuthenticated) {

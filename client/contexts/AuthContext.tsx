@@ -101,15 +101,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('🔄 AuthContext: Auth state changed:', event, session?.user?.id);
         
         // Handle specific auth events
-        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        } else if (event === 'TOKEN_REFRESHED') {
           setSession(session);
           setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            await loadUserProfile(session.user.id);
-          } else {
-            setProfile(null);
-          }
+          // Don't reload profile on token refresh to avoid loops
+          setLoading(false);
         } else if (event === 'SIGNED_IN') {
           setSession(session);
           setUser(session?.user ?? null);
@@ -117,9 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (session?.user) {
             await loadUserProfile(session.user.id);
           }
+          setLoading(false);
+        } else {
+          // For other events, just update session/user without profile reload
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
@@ -154,9 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('AuthContext: Error loading profile:', error);
       setProfile(null);
-    } finally {
-      setLoading(false);
     }
+    // Don't set loading to false here - let the main auth flow handle it
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
@@ -299,21 +303,28 @@ export function AuthGuard({
 
   // Add timeout for loading state to prevent infinite loops
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [authStable, setAuthStable] = useState(false);
   
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         console.warn('⚠️ AuthGuard: Loading timeout reached, proceeding without auth check');
         setLoadingTimeout(true);
-      }, 5000); // 5 seconds timeout
+      }, 8000); // Increased to 8 seconds timeout
       
       return () => clearTimeout(timer);
     } else {
       setLoadingTimeout(false);
+      // Add a small delay to ensure auth state is stable
+      const stabilityTimer = setTimeout(() => {
+        setAuthStable(true);
+      }, 100);
+      
+      return () => clearTimeout(stabilityTimer);
     }
   }, [loading]);
 
-  if (loading && !loadingTimeout) {
+  if ((loading && !loadingTimeout) || (!authStable && !loadingTimeout)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
