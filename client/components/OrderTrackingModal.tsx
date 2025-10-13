@@ -146,7 +146,7 @@ export function OrderTrackingModal({ isOpen, onClose }: OrderTrackingModalProps)
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusBadgeIcon = (status: string) => {
     switch (status) {
       case "delivered":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -232,7 +232,7 @@ export function OrderTrackingModal({ isOpen, onClose }: OrderTrackingModalProps)
                           {userOrder.order_number}
                         </span>
                         <div className="flex items-center gap-1">
-                          {getStatusIcon(userOrder.status || 'pending')}
+                          {getStatusBadgeIcon(userOrder.status || 'pending')}
                           <Badge variant={getStatusVariant(userOrder.status || 'pending') as any} className="text-xs">
                             {userOrder.status}
                           </Badge>
