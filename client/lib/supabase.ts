@@ -975,6 +975,337 @@ export const notifications = {
   },
 };
 
+// Admin-specific helper functions
+export const admin = {
+  // Get all products for admin (includes inactive products)
+  getAllProducts: async () => {
+    try {
+      console.log('🔍 Admin: Fetching all products...');
+      const { data, error } = await supabase
+        .from("products")
+        .select(`
+          *,
+          categories:category_id (
+            id,
+            name,
+            slug,
+            color
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("❌ Admin products fetch error:", error);
+        return { data: [], error: normalizeError(error) };
+      }
+
+      // Transform data to match expected structure
+      const transformedData = (data || []).map(product => ({
+        ...product,
+        category_name: product.categories?.name || null,
+        category_slug: product.categories?.slug || null,
+        category_color: product.categories?.color || null,
+        average_rating: 0,
+        review_count: 0,
+      }));
+
+      console.log('✅ Admin products fetched successfully:', transformedData.length);
+      return { data: transformedData, error: null };
+    } catch (err) {
+      console.error("❌ Admin products fetch error:", err);
+      return { data: [], error: normalizeError(err) };
+    }
+  },
+
+  // Get product by ID for admin
+  getProductById: async (id: string) => {
+    try {
+      console.log('🔍 Admin: Fetching product by ID:', id);
+      const { data, error } = await supabase
+        .from("products")
+        .select(`
+          *,
+          categories:category_id (
+            id,
+            name,
+            slug,
+            color
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error("❌ Admin product fetch error:", error);
+        return { data: null, error: normalizeError(error) };
+      }
+
+      if (data) {
+        // Transform data to match expected structure
+        const transformedData = {
+          ...data,
+          category_name: data.categories?.name || null,
+          category_slug: data.categories?.slug || null,
+          category_color: data.categories?.color || null,
+          average_rating: 0,
+          review_count: 0,
+        };
+        console.log('✅ Admin product fetched successfully:', transformedData.id);
+        return { data: transformedData, error: null };
+      }
+
+      return { data: null, error: new Error('Product not found') };
+    } catch (err) {
+      console.error("❌ Admin product fetch error:", err);
+      return { data: null, error: normalizeError(err) };
+    }
+  },
+
+  // Create new product
+  createProduct: async (productData: any) => {
+    try {
+      console.log('➕ Admin: Creating new product:', productData);
+
+      const { data, error } = await supabase
+        .from("products")
+        .insert(productData)
+        .select(`
+          *,
+          categories:category_id (
+            id,
+            name,
+            slug,
+            color
+          )
+        `);
+
+      if (error) {
+        console.error("❌ Admin product creation error:", error);
+        return { data: null, error: normalizeError(error) };
+      }
+
+      if (!data || data.length === 0) {
+        return { data: null, error: new Error("Product creation failed. No data returned.") };
+      }
+
+      // Transform data to match expected structure
+      const transformedData = {
+        ...data[0],
+        category_name: data[0].categories?.name || null,
+        category_slug: data[0].categories?.slug || null,
+        category_color: data[0].categories?.color || null,
+        average_rating: 0,
+        review_count: 0,
+      };
+
+      console.log('✅ Admin product created successfully:', transformedData.id);
+      return { data: transformedData, error: null };
+    } catch (err) {
+      console.error("❌ Admin product creation error:", err);
+      return { data: null, error: normalizeError(err) };
+    }
+  },
+
+  // Update existing product
+  updateProduct: async (id: string, productData: any) => {
+    try {
+      console.log('✏️ Admin: Updating product:', id, productData);
+
+      // First check if the product exists
+      const { data: existingProduct, error: checkError } = await supabase
+        .from("products")
+        .select("id")
+        .eq("id", id)
+        .single();
+
+      if (checkError || !existingProduct) {
+        console.error("❌ Admin: Product not found for update:", id);
+        return { data: null, error: new Error("Product not found. It may have been deleted by another user.") };
+      }
+
+      const { data, error } = await supabase
+        .from("products")
+        .update(productData)
+        .eq("id", id)
+        .select(`
+          *,
+          categories:category_id (
+            id,
+            name,
+            slug,
+            color
+          )
+        `);
+
+      if (error) {
+        console.error("❌ Admin product update error:", error);
+        return { data: null, error: normalizeError(error) };
+      }
+
+      if (!data || data.length === 0) {
+        return { data: null, error: new Error("No product was updated. The product may have been deleted.") };
+      }
+
+      // Transform data to match expected structure
+      const transformedData = {
+        ...data[0],
+        category_name: data[0].categories?.name || null,
+        category_slug: data[0].categories?.slug || null,
+        category_color: data[0].categories?.color || null,
+        average_rating: 0,
+        review_count: 0,
+      };
+
+      console.log('✅ Admin product updated successfully:', transformedData.id);
+      return { data: transformedData, error: null };
+    } catch (err) {
+      console.error("❌ Admin product update error:", err);
+      return { data: null, error: normalizeError(err) };
+    }
+  },
+
+  // Delete product
+  deleteProduct: async (id: string) => {
+    try {
+      console.log('🗑️ Admin: Deleting product:', id);
+
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("❌ Admin product deletion error:", error);
+        return { data: null, error: normalizeError(error) };
+      }
+
+      console.log('✅ Admin product deleted successfully:', id);
+      return { data: { id }, error: null };
+    } catch (err) {
+      console.error("❌ Admin product deletion error:", err);
+      return { data: null, error: normalizeError(err) };
+    }
+  },
+
+  // Get all categories for admin
+  getAllCategories: async () => {
+    try {
+      console.log('📂 Admin: Fetching all categories...');
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.error("❌ Admin categories fetch error:", error);
+        return { data: [], error: normalizeError(error) };
+      }
+
+      console.log('✅ Admin categories fetched successfully:', data?.length || 0);
+      return { data: data || [], error: null };
+    } catch (err) {
+      console.error("❌ Admin categories fetch error:", err);
+      return { data: [], error: normalizeError(err) };
+    }
+  },
+
+  // Get all orders for admin
+  getAllOrders: async () => {
+    try {
+      console.log('📊 Admin: Fetching all orders...');
+      const { data, error } = await supabase
+        .from("order_details")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("❌ Admin orders fetch error:", error);
+        return { data: [], error: normalizeError(error) };
+      }
+
+      console.log('✅ Admin orders fetched successfully:', data?.length || 0);
+      return { data: data || [], error: null };
+    } catch (err) {
+      console.error("❌ Admin orders fetch error:", err);
+      return { data: [], error: normalizeError(err) };
+    }
+  },
+
+  // Get order by ID for admin
+  getOrderById: async (id: string) => {
+    try {
+      console.log('📊 Admin: Fetching order by ID:', id);
+      const { data, error } = await supabase
+        .from("order_details")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error("❌ Admin order fetch error:", error);
+        return { data: null, error: normalizeError(error) };
+      }
+
+      console.log('✅ Admin order fetched successfully:', data?.id);
+      return { data, error: null };
+    } catch (err) {
+      console.error("❌ Admin order fetch error:", err);
+      return { data: null, error: normalizeError(err) };
+    }
+  },
+
+  // Update order status
+  updateOrderStatus: async (orderId: string, status: string) => {
+    try {
+      console.log('📊 Admin: Updating order status:', orderId, status);
+
+      // Determine payment status based on order status
+      let paymentStatus = null;
+
+      switch (status) {
+        case 'confirmed':
+        case 'processing':
+        case 'shipped':
+        case 'delivered':
+          paymentStatus = 'paid';
+          break;
+        case 'cancelled':
+          paymentStatus = 'failed';
+          break;
+        case 'pending':
+          paymentStatus = 'pending';
+          break;
+        default:
+          paymentStatus = 'pending';
+      }
+
+      const { data, error } = await supabase
+        .from("orders")
+        .update({
+          status: status as any,
+          payment_status: paymentStatus,
+        })
+        .eq("id", orderId)
+        .select();
+
+      if (error) {
+        console.error("❌ Admin order status update error:", error);
+        return { data: null, error: normalizeError(error) };
+      }
+
+      if (!data || data.length === 0) {
+        return { data: null, error: new Error("No order was updated. The order may have been deleted.") };
+      }
+
+      console.log('✅ Admin order status updated successfully:', data[0]);
+      return { data: data[0], error: null };
+    } catch (err) {
+      console.error("❌ Admin order status update error:", err);
+      return { data: null, error: normalizeError(err) };
+    }
+  },
+};
+
 // Expose to global scope for debugging (after all objects are defined)
 if (typeof window !== 'undefined') {
   (window as any).supabase = supabase;

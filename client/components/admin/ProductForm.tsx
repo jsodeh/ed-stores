@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
+import { supabase, admin } from "@/lib/supabase";
 import { Product, Category } from "@shared/database.types";
 import { X, Save, Loader2, Upload } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -102,14 +102,17 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
   const loadCategories = async () => {
     console.log('📂 ProductForm: Loading categories...');
-    const { data } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order");
-    console.log('📂 ProductForm: Categories loaded:', data?.length || 0);
-    console.log('📂 ProductForm: Categories data:', data);
-    setCategories(data || []);
+    const { data, error } = await admin.getAllCategories();
+    if (error) {
+      console.error('❌ ProductForm: Error loading categories:', error);
+      alert('Error loading categories. Please refresh the page and try again.');
+      return;
+    }
+    // Filter to only active categories for product form
+    const activeCategories = (data || []).filter(cat => cat.is_active);
+    console.log('📂 ProductForm: Categories loaded:', activeCategories.length);
+    console.log('📂 ProductForm: Categories data:', activeCategories);
+    setCategories(activeCategories);
   };
 
   const generateSKU = () => {
@@ -243,61 +246,26 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
       if (product) {
         console.log("✏️ ProductForm: Updating existing product:", product.id);
+        const { data, error } = await admin.updateProduct(product.id, productData);
         
-        // First check if the product exists
-        const { data: existingProduct, error: checkError } = await supabase
-          .from("products")
-          .select("id")
-          .eq("id", product.id)
-          .single();
-
-        if (checkError || !existingProduct) {
-          console.error("❌ ProductForm: Product not found for update:", product.id);
-          throw new Error("Product not found. It may have been deleted by another user.");
-        }
-
-        // Remove updated_at from productData as it's handled by database trigger
-        const { updated_at, ...updateData } = productData;
-        
-        const { data, error } = await supabase
-          .from("products")
-          .update(updateData)
-          .eq("id", product.id)
-          .select();
-
         if (error) {
           console.error("❌ ProductForm: Update error:", error);
           throw error;
         }
 
-        if (!data || data.length === 0) {
-          throw new Error("No product was updated. The product may have been deleted.");
-        }
-
-        console.log("✅ ProductForm: Update successful:", data[0]);
-        return data[0];
+        console.log("✅ ProductForm: Update successful:", data);
+        return data;
       } else {
         console.log("➕ ProductForm: Creating new product");
+        const { data, error } = await admin.createProduct(productData);
         
-        // Remove updated_at from productData as it's handled by database trigger
-        const { updated_at, ...insertData } = productData;
-        
-        const { data, error } = await supabase
-          .from("products")
-          .insert(insertData)
-          .select();
-
         if (error) {
           console.error("❌ ProductForm: Insert error:", error);
           throw error;
         }
 
-        if (!data || data.length === 0) {
-          throw new Error("Product creation failed. No data returned.");
-        }
-
-        console.log("✅ ProductForm: Insert successful:", data[0]);
-        return data[0];
+        console.log("✅ ProductForm: Insert successful:", data);
+        return data;
       }
     },
     onSuccess: () => {

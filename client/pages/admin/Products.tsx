@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/lib/supabase";
+import { supabase, admin } from "@/lib/supabase";
 import { Product } from "@shared/database.types";
 import {
   Plus,
@@ -69,33 +69,15 @@ export default function AdminProducts() {
     queryKey: ['admin-products'],
     queryFn: async () => {
       console.log('📦 Fetching admin products...');
+      const { data, error } = await admin.getAllProducts();
       
-      const { data, error } = await supabase.from("products").select(`
-        *,
-        categories:category_id (
-          id,
-          name,
-          slug,
-          color
-        )
-      `).order("created_at", { ascending: false });
-
       if (error) {
         console.error('❌ Admin products fetch error:', error);
         throw error;
       }
 
-      const transformedData = (data || []).map(product => ({
-        ...product,
-        category_name: product.categories?.name || null,
-        category_slug: product.categories?.slug || null,
-        category_color: product.categories?.color || null,
-        average_rating: 0,
-        review_count: 0,
-      }));
-
-      console.log('✅ Admin products fetched successfully:', transformedData.length, 'products');
-      return transformedData;
+      console.log('✅ Admin products fetched successfully:', data.length, 'products');
+      return data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes for admin data
     retry: (failureCount, error) => {
@@ -116,7 +98,7 @@ export default function AdminProducts() {
 
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await supabase.from("products").delete().eq("id", productId);
+      const { error } = await admin.deleteProduct(productId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -125,7 +107,7 @@ export default function AdminProducts() {
     },
     onError: (error) => {
       console.error("Error deleting product:", error);
-      alert("Error deleting product. Please try again.");
+      alert(`Error deleting product: ${error.message}. Please try again.`);
     },
   });
 

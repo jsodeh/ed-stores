@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabase, admin } from "@/lib/supabase";
 import type { Order } from "@shared/database.types";
 import { useEffect, useRef } from "react";
 
@@ -52,20 +52,16 @@ export function useAdminOrders() {
   return useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      console.log('📊 Fetching admin orders from order_details view...');
+      console.log('📊 Fetching admin orders...');
+      const { data, error } = await admin.getAllOrders();
       
-      const { data, error } = await supabase
-        .from("order_details")
-        .select("*")
-        .order("created_at", { ascending: false });
-
       if (error) {
         console.error('❌ Admin orders fetch error:', error);
         throw error;
       }
 
-      console.log('✅ Admin orders fetched successfully:', data?.length, 'orders');
-      return data || [];
+      console.log('✅ Admin orders fetched successfully:', data.length, 'orders');
+      return data;
     },
     // Use the global query client settings, but override specific ones if needed
     staleTime: 2 * 60 * 1000, // 2 minutes for admin data
