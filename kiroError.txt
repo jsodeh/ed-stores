@@ -1,0 +1,221 @@
+This happened when I tried to save a product I was editing. Tell me why it's happening and how you fixed it. Also, check that this type of issue(s) won't happen when I try to add a new product.
+
+
+
+
+
+🔧 Supabase Configuration Debug:
+
+index-DJZkkkUQ.js:356 📍 URL: https://isgqdllaunoydbjweiwo.supabase.co
+
+index-DJZkkkUQ.js:356 🔑 API Key (first 20 chars): eyJhbGciOiJIUzI1NiIs...
+
+index-DJZkkkUQ.js:356 🌍 Environment variables loaded: Object
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ⏳ ProductGrid: Showing loading state
+
+index-DJZkkkUQ.js:356 🔍 Fetching products from product_details view...
+
+index-DJZkkkUQ.js:380 🔍 Fetching categories from categories table...
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ⏳ ProductGrid: Showing loading state
+
+index-DJZkkkUQ.js:420 🔄 AuthContext: Auth state changed: INITIAL_SESSION undefined
+
+index-DJZkkkUQ.js:356 🔍 Supabase initial connectivity check passed
+
+index-DJZkkkUQ.js:356 🔍 Raw products query result: Object
+
+index-DJZkkkUQ.js:356 🔍 Raw products data before filtering: 32 items
+
+index-DJZkkkUQ.js:356 🔍 Final filtered products: 32 items
+
+index-DJZkkkUQ.js:356 ✅ Active products filtered: 32
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ⏳ ProductGrid: Showing loading state
+
+index-DJZkkkUQ.js:380 🔍 Raw categories query result: Object
+
+index-DJZkkkUQ.js:380 🔍 Raw categories data before transformation: 7 items
+
+index-DJZkkkUQ.js:380 🔍 Final transformed categories: 7 items
+
+index-DJZkkkUQ.js:380 ✅ Active categories filtered: 7
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ✅ ProductGrid: Showing products 32
+
+ui-PEI8C4ns.js:53 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+(anonymous) @ ui-PEI8C4ns.js:53Understand this warning
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ✅ ProductGrid: Showing products 32
+
+index-DJZkkkUQ.js:420 🔄 AuthContext: Auth state changed: SIGNED_IN 64411142-72a2-4ce7-9b8f-cb8eb2dd69ee
+
+index-DJZkkkUQ.js:420 AuthContext: Loading profile for user: 64411142-72a2-4ce7-9b8f-cb8eb2dd69ee
+
+index-DJZkkkUQ.js:356 👤 profiles.getProfile: Fetching profile for user: 64411142-72a2-4ce7-9b8f-cb8eb2dd69ee
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ✅ ProductGrid: Showing products 32
+
+index-DJZkkkUQ.js:380 🛒 Fetching cart for user: 64411142-72a2-4ce7-9b8f-cb8eb2dd69ee
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ✅ ProductGrid: Showing products 32
+
+index-DJZkkkUQ.js:356 👤 profiles.getProfile: Result for user 64411142-72a2-4ce7-9b8f-cb8eb2dd69ee Object
+
+index-DJZkkkUQ.js:420 AuthContext: Profile loaded: Object
+
+index-DJZkkkUQ.js:420 ✅ AuthModal: Sign in successful, cart transfer will be handled by StoreContext
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ✅ ProductGrid: Showing products 32
+
+index-DJZkkkUQ.js:420 🎉 Header: Admin access confirmed
+
+index-DJZkkkUQ.js:391 ✅ Cart fetched successfully: 7 items
+
+index-DJZkkkUQ.js:391 📦 Raw cart data: Array(7)
+
+index-DJZkkkUQ.js:391 🔄 Transformed cart data: Array(7)
+
+index-DJZkkkUQ.js:420 🛍️ ProductGrid: Rendering with state Object
+
+index-DJZkkkUQ.js:420 ✅ ProductGrid: Showing products 32
+
+index-DJZkkkUQ.js:439 📂 ProductForm: Loading categories...
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Form data changed: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Current category_id: 
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Available categories: Array(0)
+
+ui-PEI8C4ns.js:53 `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog
+
+(anonymous) @ ui-PEI8C4ns.js:53Understand this error
+
+ui-PEI8C4ns.js:53 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+(anonymous) @ ui-PEI8C4ns.js:53Understand this warning
+
+index-DJZkkkUQ.js:439 📂 ProductForm: Categories loaded: 7
+
+index-DJZkkkUQ.js:439 📂 ProductForm: Categories data: Array(7)
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Initializing form with product data: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Product category_id: ea69df4f-803e-4cff-8317-9ae00220fcb4
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Categories available: 7
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Category exists in list: true Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Initial form data: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Setting category_id to: ea69df4f-803e-4cff-8317-9ae00220fcb4
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Form data changed: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Current category_id: 
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Available categories: Array(7)
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Form data changed: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Current category_id: ea69df4f-803e-4cff-8317-9ae00220fcb4
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Available categories: Array(7)
+
+index-DJZkkkUQ.js:439 File selected for upload: Object
+
+index-DJZkkkUQ.js:439 🖼️ ProductForm: Starting image upload... Object
+
+index-DJZkkkUQ.js:439 📤 ProductForm: Uploading file to storage... Object
+
+index-DJZkkkUQ.js:439 ✅ ProductForm: Upload successful, getting public URL... Object
+
+index-DJZkkkUQ.js:439 🔗 ProductForm: Public URL retrieved: https://isgqdllaunoydbjweiwo.supabase.co/storage/v1/object/public/product-images/1760339288435-vz78lvkm6da.png
+
+index-DJZkkkUQ.js:439 🖼️ ProductForm: Image uploaded successfully: Object
+
+index-DJZkkkUQ.js:439 🖼️ ProductForm: Updating form data with image URL
+
+index-DJZkkkUQ.js:439 🖼️ ProductForm: Form data after image update: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Form data changed: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Current category_id: ea69df4f-803e-4cff-8317-9ae00220fcb4
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Available categories: Array(7)
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Submitting product data: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Form data before processing: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Selected category: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Product being edited: Object
+
+index-DJZkkkUQ.js:439 🔄 ProductForm: Starting mutation... Object
+
+index-DJZkkkUQ.js:439 ✏️ ProductForm: Updating existing product: db9abc6d-b166-474f-a3fb-d24c1b4c2e08
+
+isgqdllaunoydbjweiwo.supabase.co/rest/v1/products?id=eq.db9abc6d-b166-474f-a3fb-d24c1b4c2e08&select=*:1  Failed to load resource: the server responded with a status of 406 ()Understand this error
+
+index-DJZkkkUQ.js:439 ❌ ProductForm: Update error: Object
+
+mutationFn @ index-DJZkkkUQ.js:439Understand this error
+
+index-DJZkkkUQ.js:439 Error saving product: Object
+
+onError @ index-DJZkkkUQ.js:439Understand this error
+
+index-DJZkkkUQ.js:439 Error details: Object
+
+onError @ index-DJZkkkUQ.js:439Understand this error
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Submitting product data: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Form data before processing: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Selected category: Object
+
+index-DJZkkkUQ.js:439 📝 ProductForm: Product being edited: Object
+
+index-DJZkkkUQ.js:439 🔄 ProductForm: Starting mutation... Object
+
+index-DJZkkkUQ.js:439 ✏️ ProductForm: Updating existing product: db9abc6d-b166-474f-a3fb-d24c1b4c2e08
+
+isgqdllaunoydbjweiwo.supabase.co/rest/v1/products?id=eq.db9abc6d-b166-474f-a3fb-d24c1b4c2e08&select=*:1  Failed to load resource: the server responded with a status of 406 ()Understand this error
+
+index-DJZkkkUQ.js:439 ❌ ProductForm: Update error: Object
+
+mutationFn @ index-DJZkkkUQ.js:439Understand this error
+
+index-DJZkkkUQ.js:439 Error saving product: Object
+
+onError @ index-DJZkkkUQ.js:439Understand this error
+
+index-DJZkkkUQ.js:439 Error details: Object
+
+onError @ index-DJZkkkUQ.js:439Understand this error
