@@ -1203,9 +1203,16 @@ export const admin = {
         console.log('🔧 Admin: Name update test:', { nameUpdateResult, nameUpdateError });
 
         if (nameUpdateError || !nameUpdateResult || nameUpdateResult.length === 0) {
+          // RLS is completely blocking updates for this product
+          // This is a database configuration issue that needs to be fixed
+          console.error('🚨 Admin: RLS policies are completely blocking updates for this product');
+          console.error('🚨 Admin: This requires database-level RLS policy adjustment');
+          console.error('🚨 Admin: Product ID:', id);
+          console.error('🚨 Admin: User role: super_admin');
+
           return {
             data: null,
-            error: new Error(`RLS policies are blocking all updates. Even basic name update failed. Error: ${nameUpdateError?.message || 'No rows affected'}`)
+            error: new Error(`Database RLS policies are blocking all product updates. This is a configuration issue that needs to be fixed in Supabase. Product ID: ${id}. Please check the RLS policies on the products table.`)
           };
         }
 
