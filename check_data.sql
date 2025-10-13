@@ -1,0 +1,1 @@
+SELECT COUNT(*) as product_count FROM products; SELECT COUNT(*) as category_count FROM categories; SELECT COUNT(*) as active_products FROM products WHERE is_active = true; SELECT COUNT(*) as active_categories FROM categories WHERE is_active = true;

@@ -72,27 +72,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Data fetching using react-query with simplified settings
+  // Data fetching using react-query with error visibility
   const { data: productsData = [], isLoading: productsLoading, error: productsError } = useQuery<Product[], Error>({
     queryKey: ['products', selectedCategory, searchQuery],
     queryFn: async () => {
       console.log('🛍️ Fetching products:', { selectedCategory, searchQuery });
-      const { data, error } = await productsApi.getAll({ category: selectedCategory, search: searchQuery });
-      if (error) throw error;
-      console.log('✅ Products fetched successfully:', data?.length, 'products');
-      return data || [];
+      try {
+        const { data, error } = await productsApi.getAll({ category: selectedCategory, search: searchQuery });
+        if (error) {
+          console.error('❌ Products API returned error:', error);
+          throw error;
+        }
+        console.log('✅ Products fetched successfully:', data?.length, 'products');
+        return data || [];
+      } catch (err) {
+        console.error('❌ Products query failed:', err);
+        throw err;
+      }
     },
+    throwOnError: false, // Handle errors gracefully in UI
   });
 
   const { data: categoriesData = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[], Error>({
     queryKey: ['categories'],
     queryFn: async () => {
       console.log('📂 Fetching categories...');
-      const { data, error } = await categoriesApi.getAll();
-      if (error) throw error;
-      console.log('✅ Categories fetched successfully:', data?.length, 'categories');
-      return data || [];
+      try {
+        const { data, error } = await categoriesApi.getAll();
+        if (error) {
+          console.error('❌ Categories API returned error:', error);
+          throw error;
+        }
+        console.log('✅ Categories fetched successfully:', data?.length, 'categories');
+        return data || [];
+      } catch (err) {
+        console.error('❌ Categories query failed:', err);
+        throw err;
+      }
     },
+    throwOnError: false, // Handle errors gracefully in UI
   });
 
   const { data: cartItems = [], isLoading: cartLoading, error: cartError } = useQuery<CartItemWithProduct[], Error>({

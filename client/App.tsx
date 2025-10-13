@@ -33,7 +33,7 @@ import AdminNotifications from "./pages/admin/Notifications";
 import NotFound from "./pages/NotFound";
 import { AuthGuard } from "./contexts/AuthContext";
 
-// Configure React Query client with balanced settings
+// Configure React Query client with error visibility
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -49,8 +49,8 @@ const queryClient = new QueryClient({
       staleTime: 1 * 60 * 1000, // 1 minute
       gcTime: 5 * 60 * 1000, // 5 minutes
       
-      // Add error handling to prevent infinite loading states
-      throwOnError: false,
+      // Enable error throwing to see what's actually failing
+      throwOnError: true,
     },
     mutations: {
       retry: 1,

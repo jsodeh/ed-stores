@@ -27,7 +27,7 @@ const ERROR_COOLDOWN_MS = 30000; // 30 seconds
 function normalizeError(err: any): Error | null {
   if (!err) return null;
   if (err instanceof Error) return err;
-  
+
   try {
     const parts: string[] = [];
     if (err.message) parts.push(err.message);
@@ -38,7 +38,7 @@ function normalizeError(err: any): Error | null {
     const message = parts.join(' | ');
     const e = new Error(message);
     (e as any).original = err;
-    
+
     // Circuit breaker pattern - track consecutive errors
     const now = Date.now();
     if (now - lastErrorTime > ERROR_COOLDOWN_MS) {
@@ -46,7 +46,7 @@ function normalizeError(err: any): Error | null {
     }
     consecutiveErrors++;
     lastErrorTime = now;
-    
+
     // Detect invalid API key messages and set flag so we can short-circuit further requests
     try {
       const lower = message.toLowerCase();
@@ -54,12 +54,12 @@ function normalizeError(err: any): Error | null {
         supabaseInvalidApiKey = true;
         console.error('🔒 Supabase invalid API key detected:', message);
       }
-      
+
       if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
         console.error('🚨 Circuit breaker activated: Too many consecutive errors');
         (e as any).circuitBreakerTripped = true;
       }
-    } catch (e) {}
+    } catch (e) { }
     return e;
   } catch {
     return new Error(String(err));
@@ -226,53 +226,73 @@ export const products = {
       console.error('❌ Products fetch aborted: invalid Supabase API key');
       return { data: [], error: new Error('Invalid Supabase API key configured') };
     }
-    
+
     if (isCircuitBreakerActive()) {
       console.error('❌ Products fetch aborted: circuit breaker active');
       return { data: [], error: new Error('Service temporarily unavailable. Please try again later.') };
     }
-    
+
     try {
-      console.log('🔍 Fetching products from product_details view...');
-      
+      console.log('🔍 Fetching products from products table directly...');
+
       let query = publicSupabase
-        .from("product_details")
-        .select("*")
+        .from("products")
+        .select(`
+          *,
+          categories:category_id (
+            id,
+            name,
+            slug,
+            color
+          )
+        `)
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
 
       if (category) {
-        query = query.eq('category_slug', category);
+        // First get the category ID
+        const { data: categoryData } = await publicSupabase
+          .from("categories")
+          .select("id")
+          .eq("slug", category)
+          .eq("is_active", true)
+          .single();
+
+        if (categoryData) {
+          query = query.eq('category_id', categoryData.id);
+        }
       }
 
       if (search) {
         query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
       }
-      
+
       // Use the publicSupabase client for read operations to avoid auth issues
       const { data, error } = await query;
-      
+
       console.log('🔍 Raw products query result:', { data, error, count: data?.length });
-      
+
       if (error) {
         console.error("❌ Products API Error:", error);
         // Don't throw error, return empty array to prevent app crash
         return { data: [], error: normalizeError(error) };
       }
 
-      // Filter active products on client side
-      console.log('🔍 Raw products data before filtering:', data?.length, 'items');
-      
-      const activeProducts = (data || []).filter(product => {
-        const isActive = product.is_active !== false;
-        if (!isActive) {
-          console.log('🔍 Filtering out inactive product:', product.name, 'is_active:', product.is_active);
-        }
-        return isActive;
-      });
-      
-      console.log('🔍 Final filtered products:', activeProducts.length, 'items');
-      console.log('✅ Active products filtered:', activeProducts.length);
-      return { data: activeProducts, error: null };
+      // Transform data to match expected structure (like the view)
+      console.log('🔍 Raw products data from table:', data?.length, 'items');
+
+      const transformedProducts = (data || []).map(product => ({
+        ...product,
+        category_name: product.categories?.name || null,
+        category_slug: product.categories?.slug || null,
+        category_color: product.categories?.color || null,
+        average_rating: 0,
+        review_count: 0,
+      }));
+
+      console.log('🔍 Transformed products:', transformedProducts.length, 'items');
+      console.log('✅ Products fetched from table successfully:', transformedProducts.length);
+      return { data: transformedProducts, error: null };
     } catch (err) {
       console.error("❌ Products fetch error:", err);
       return { data: [], error: normalizeError(err) };
@@ -295,7 +315,7 @@ export const products = {
       .eq("id", id)
       .eq("is_active", true)
       .single();
-    
+
     if (data && !error) {
       // Transform data to match the view structure
       const transformedData = {
@@ -310,7 +330,7 @@ export const products = {
       };
       return { data: transformedData, error };
     }
-    
+
     return { data, error };
   },
 
@@ -330,7 +350,7 @@ export const products = {
       .eq("is_active", true)
       .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
       .order("created_at", { ascending: false });
-    
+
     if (data && !error) {
       // Transform data to match the view structure
       const transformedData = data.map(product => ({
@@ -345,7 +365,7 @@ export const products = {
       }));
       return { data: transformedData, error };
     }
-    
+
     return { data, error };
   },
 
@@ -358,11 +378,11 @@ export const products = {
       .eq("slug", categorySlug)
       .eq("is_active", true)
       .single();
-      
+
     if (!category) {
       return { data: [], error: null };
     }
-    
+
     const { data, error } = await supabase
       .from("products")
       .select(`
@@ -377,7 +397,7 @@ export const products = {
       .eq("is_active", true)
       .eq("category_id", category.id)
       .order("created_at", { ascending: false });
-    
+
     if (data && !error) {
       // Transform data to match the view structure
       const transformedData = data.map(product => ({
@@ -392,7 +412,7 @@ export const products = {
       }));
       return { data: transformedData, error };
     }
-    
+
     return { data, error };
   },
 };
@@ -405,43 +425,34 @@ export const categories = {
       console.error('❌ Categories fetch aborted: invalid Supabase API key');
       return { data: [], error: new Error('Invalid Supabase API key configured') };
     }
-    
+
     if (isCircuitBreakerActive()) {
       console.error('❌ Categories fetch aborted: circuit breaker active');
       return { data: [], error: new Error('Service temporarily unavailable. Please try again later.') };
     }
-    
+
     try {
-      console.log('🔍 Fetching categories from categories table...');
-      
+      console.log('🔍 Fetching categories from categories table directly...');
+
       // Use the publicSupabase client for read operations to avoid auth issues
       const { data, error } = await publicSupabase
         .from("categories")
         .select("*")
+        .eq("is_active", true)
         .order("sort_order", { ascending: true });
-      
+
       console.log('🔍 Raw categories query result:', { data, error, count: data?.length });
-      
+
       if (error) {
         console.error("❌ Categories API Error:", error);
         // Don't throw error, return empty array to prevent app crash
         return { data: [], error: normalizeError(error) };
       }
 
-      // Filter active categories on client side
-      console.log('🔍 Raw categories data before transformation:', data?.length, 'items');
-      
-      const activeCategories = (data || []).filter(category => {
-        const isActive = category.is_active !== false;
-        if (!isActive) {
-          console.log('🔍 Filtering out inactive category:', category.name, 'is_active:', category.is_active);
-        }
-        return isActive;
-      });
-      
-      console.log('🔍 Final transformed categories:', activeCategories.length, 'items');
-      console.log('✅ Active categories filtered:', activeCategories.length);
-      return { data: activeCategories, error: null };
+      // Categories are already filtered by is_active = true in the query
+      console.log('🔍 Raw categories data from table:', data?.length, 'items');
+      console.log('✅ Categories fetched from table successfully:', data?.length);
+      return { data: data || [], error: null };
     } catch (err) {
       console.error("❌ Categories fetch error:", err);
       return { data: [], error: normalizeError(err) };
@@ -472,19 +483,19 @@ export const cart = {
         `,
         )
         .eq("user_id", userId);
-      
+
       if (error) {
         console.error("❌ Cart API Error:", error);
         // Check if it's an authentication/permission error
-        if (error.message?.includes('401') || 
-            error.message?.includes('403') || 
-            error.message?.includes('permission')) {
+        if (error.message?.includes('401') ||
+          error.message?.includes('403') ||
+          error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart. This might be due to RLS policies.');
           return { data: [], error: { ...error, code: 'PERMISSION_DENIED' } };
         }
         return { data: [], error: normalizeError(error) };
       }
-      
+
       if (data) {
         // Transform data to match the expected structure
         const transformedData = data.map(item => ({
@@ -500,13 +511,13 @@ export const cart = {
             categories: undefined
           }
         })).filter(item => item.products); // Filter out items without products
-        
+
         console.log('✅ Cart fetched successfully:', transformedData.length, 'items');
         console.log('📦 Raw cart data:', data);
         console.log('🔄 Transformed cart data:', transformedData);
         return { data: transformedData, error: null };
       }
-      
+
       return { data: data || [], error: null };
     } catch (err) {
       console.error("❌ Cart fetch error:", err);
@@ -518,7 +529,7 @@ export const cart = {
   addItem: async (userId: string, productId: string, quantity: number = 1) => {
     try {
       console.log('🛒 Adding item to cart:', { userId, productId, quantity });
-      
+
       // First check if item already exists
       const { data: existingItem } = await supabase
         .from("cart_items")
@@ -526,7 +537,7 @@ export const cart = {
         .eq("user_id", userId)
         .eq("product_id", productId)
         .single();
-      
+
       if (existingItem) {
         // Update existing item quantity
         const newQuantity = existingItem.quantity + quantity;
@@ -536,18 +547,18 @@ export const cart = {
           .eq("user_id", userId)
           .eq("product_id", productId)
           .select();
-        
+
         if (error) {
           console.error("❌ Cart addItem (update) Error:", error);
-          if (error.message?.includes('401') || 
-              error.message?.includes('403') || 
-              error.message?.includes('permission')) {
+          if (error.message?.includes('401') ||
+            error.message?.includes('403') ||
+            error.message?.includes('permission')) {
             console.warn('🔐 Authentication/Permission error detected for cart addItem (update). This might be due to RLS policies.');
             return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
           }
           return { data: null, error: normalizeError(error) };
         }
-        
+
         console.log('✅ Item quantity updated in cart successfully');
         console.log('📦 Updated cart item data:', data);
         return { data, error: null };
@@ -561,19 +572,19 @@ export const cart = {
             quantity,
           })
           .select();
-        
+
         if (error) {
           console.error("❌ Cart addItem (insert) Error:", error);
           // Check if it's an authentication/permission error
-          if (error.message?.includes('401') || 
-              error.message?.includes('403') || 
-              error.message?.includes('permission')) {
+          if (error.message?.includes('401') ||
+            error.message?.includes('403') ||
+            error.message?.includes('permission')) {
             console.warn('🔐 Authentication/Permission error detected for cart addItem (insert). This might be due to RLS policies.');
             return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
           }
           return { data: null, error: normalizeError(error) };
         }
-        
+
         console.log('✅ Item added to cart successfully');
         console.log('📦 Added cart item data:', data);
         return { data, error: null };
@@ -602,19 +613,19 @@ export const cart = {
         .eq("user_id", userId)
         .eq("product_id", productId)
         .select();
-      
+
       if (error) {
         console.error("❌ Cart updateQuantity Error:", error);
         // Check if it's an authentication/permission error
-        if (error.message?.includes('401') || 
-            error.message?.includes('403') || 
-            error.message?.includes('permission')) {
+        if (error.message?.includes('401') ||
+          error.message?.includes('403') ||
+          error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart updateQuantity. This might be due to RLS policies.');
           return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
         return { data: null, error: normalizeError(error) };
       }
-      
+
       console.log('✅ Cart item quantity updated successfully');
       console.log('📦 Updated cart item data:', data);
       return { data, error: null };
@@ -633,19 +644,19 @@ export const cart = {
         .delete()
         .eq("user_id", userId)
         .eq("product_id", productId);
-      
+
       if (error) {
         console.error("❌ Cart removeItem Error:", error);
         // Check if it's an authentication/permission error
-        if (error.message?.includes('401') || 
-            error.message?.includes('403') || 
-            error.message?.includes('permission')) {
+        if (error.message?.includes('401') ||
+          error.message?.includes('403') ||
+          error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart removeItem. This might be due to RLS policies.');
           return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
         return { data: null, error: normalizeError(error) };
       }
-      
+
       console.log('✅ Item removed from cart successfully');
       console.log('📦 Removed cart item data:', data);
       return { data, error: null };
@@ -663,19 +674,19 @@ export const cart = {
         .from("cart_items")
         .delete()
         .eq("user_id", userId);
-      
+
       if (error) {
         console.error("❌ Cart clearCart Error:", error);
         // Check if it's an authentication/permission error
-        if (error.message?.includes('401') || 
-            error.message?.includes('403') || 
-            error.message?.includes('permission')) {
+        if (error.message?.includes('401') ||
+          error.message?.includes('403') ||
+          error.message?.includes('permission')) {
           console.warn('🔐 Authentication/Permission error detected for cart clearCart. This might be due to RLS policies.');
           return { data: null, error: normalizeError({ ...error, code: 'PERMISSION_DENIED' }) };
         }
         return { data: null, error: normalizeError(error) };
       }
-      
+
       console.log('✅ Cart cleared successfully');
       return { data, error: null };
     } catch (err) {
@@ -706,7 +717,7 @@ export const favorites = {
       `,
       )
       .eq("user_id", userId);
-    
+
     if (data && !error) {
       // Transform data to match the expected structure
       const transformedData = data.map(item => ({
@@ -724,7 +735,7 @@ export const favorites = {
       })).filter(item => item.products); // Filter out items without products
       return { data: transformedData, error };
     }
-    
+
     return { data: data || [], error };
   },
 
@@ -825,12 +836,12 @@ export const orders = {
     });
     return { data, error };
   },
-  
+
   // Update order status (for admin)
   updateOrderStatus: async (orderId: string, status: Database["public"]["Enums"]["order_status"]) => {
     // Determine payment status based on order status
     let paymentStatus = null;
-    
+
     switch (status) {
       case 'confirmed':
       case 'processing':
@@ -857,7 +868,7 @@ export const orders = {
         const { error: restoreError } = await supabase.rpc('restore_order_inventory' as any, {
           p_order_id: orderId
         });
-        
+
         if (restoreError) {
           console.error('Error restoring inventory for cancelled order:', restoreError);
           // Don't fail the status update if inventory restoration fails
@@ -868,7 +879,7 @@ export const orders = {
       }
     }
 
-    const updateData: any = { 
+    const updateData: any = {
       status: status as any,
       payment_status: paymentStatus,
       updated_at: new Date().toISOString()
