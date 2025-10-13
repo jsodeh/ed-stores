@@ -72,7 +72,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Data fetching using react-query with optimized settings
+  // Data fetching using react-query with simplified settings
   const { data: productsData = [], isLoading: productsLoading, error: productsError } = useQuery<Product[], Error>({
     queryKey: ['products', selectedCategory, searchQuery],
     queryFn: async () => {
@@ -81,17 +81,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       console.log('✅ Products fetched successfully:', data?.length, 'products');
       return data || [];
-    },
-    staleTime: 3 * 60 * 1000, // 3 minutes for product data
-    retry: (failureCount, error) => {
-      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: 1500,
-    meta: {
-      errorMessage: "Failed to load products."
     },
   });
 
@@ -103,17 +92,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       console.log('✅ Categories fetched successfully:', data?.length, 'categories');
       return data || [];
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes for categories (they change less frequently)
-    retry: (failureCount, error) => {
-      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: 1500,
-    meta: {
-      errorMessage: "Failed to load categories."
     },
   });
 
@@ -127,20 +105,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.log('✅ Cart fetched successfully:', data?.length, 'items');
       return (data || []) as CartItemWithProduct[];
     },
-    enabled: !!user && !!user.id, // More specific check
-    staleTime: 1 * 60 * 1000, // 1 minute for cart data (more dynamic)
-    retry: (failureCount, error) => {
-      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: 1000,
-    refetchOnMount: false, // Prevent refetch on component mount
-    refetchOnReconnect: false, // Prevent refetch on reconnect
-    meta: {
-      errorMessage: "Failed to load cart."
-    },
+    enabled: !!user,
   });
 
   const { data: favoriteProducts = [], error: favoritesError } = useQuery<Product[], Error>({
@@ -154,20 +119,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.log('✅ Favorites fetched successfully:', favorites.length, 'items');
       return favorites;
     },
-    enabled: !!user && !!user.id, // More specific check
-    staleTime: 2 * 60 * 1000, // 2 minutes for favorites
-    retry: (failureCount, error) => {
-      if (error?.message?.includes('permission') || error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: 1000,
-    refetchOnMount: false, // Prevent refetch on component mount
-    refetchOnReconnect: false, // Prevent refetch on reconnect
-    meta: {
-      errorMessage: "Failed to load favorites."
-    },
+    enabled: !!user,
   });
 
   // Error handling for queries

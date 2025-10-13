@@ -303,28 +303,21 @@ export function AuthGuard({
 
   // Add timeout for loading state to prevent infinite loops
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [authStable, setAuthStable] = useState(false);
   
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         console.warn('⚠️ AuthGuard: Loading timeout reached, proceeding without auth check');
         setLoadingTimeout(true);
-      }, 8000); // Increased to 8 seconds timeout
+      }, 5000); // 5 seconds timeout
       
       return () => clearTimeout(timer);
     } else {
       setLoadingTimeout(false);
-      // Add a small delay to ensure auth state is stable
-      const stabilityTimer = setTimeout(() => {
-        setAuthStable(true);
-      }, 100);
-      
-      return () => clearTimeout(stabilityTimer);
     }
   }, [loading]);
 
-  if ((loading && !loadingTimeout) || (!authStable && !loadingTimeout)) {
+  if (loading && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
