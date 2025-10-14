@@ -1422,12 +1422,21 @@ export const admin = {
   },
 
   // Update order status
-  updateOrderStatus: async (orderId: string, status: string) => {
+  updateOrderStatus: async (orderId: string, status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled') => {
     try {
       console.log('📊 Admin: Updating order status:', orderId, status);
 
+      // Validate status values against the enum
+      const validOrderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+      const validPaymentStatuses = ['pending', 'paid', 'failed', 'refunded'];
+
+      if (!validOrderStatuses.includes(status)) {
+        console.error('❌ Invalid order status:', status);
+        return { data: null, error: new Error(`Invalid order status: ${status}. Valid values are: ${validOrderStatuses.join(', ')}`) };
+      }
+
       // Determine payment status based on order status
-      let paymentStatus = null;
+      let paymentStatus: string;
 
       switch (status) {
         case 'confirmed':
@@ -1440,16 +1449,17 @@ export const admin = {
           paymentStatus = 'failed';
           break;
         case 'pending':
-          paymentStatus = 'pending';
-          break;
         default:
           paymentStatus = 'pending';
+          break;
       }
+
+      console.log('📊 Admin: Updating to status:', status, 'payment_status:', paymentStatus);
 
       const { data, error } = await supabase
         .from("orders")
         .update({
-          status: status as any,
+          status: status,
           payment_status: paymentStatus,
         })
         .eq("id", orderId)
