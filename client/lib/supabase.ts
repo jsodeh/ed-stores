@@ -1426,41 +1426,12 @@ export const admin = {
     try {
       console.log('📊 Admin: Updating order status:', orderId, status);
 
-      // Validate status values against the enum
-      const validOrderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-      const validPaymentStatuses = ['pending', 'paid', 'failed', 'refunded'];
-
-      if (!validOrderStatuses.includes(status)) {
-        console.error('❌ Invalid order status:', status);
-        return { data: null, error: new Error(`Invalid order status: ${status}. Valid values are: ${validOrderStatuses.join(', ')}`) };
-      }
-
-      // Determine payment status based on order status
-      let paymentStatus: string;
-
-      switch (status) {
-        case 'confirmed':
-        case 'processing':
-        case 'shipped':
-        case 'delivered':
-          paymentStatus = 'paid';
-          break;
-        case 'cancelled':
-          paymentStatus = 'failed';
-          break;
-        case 'pending':
-        default:
-          paymentStatus = 'pending';
-          break;
-      }
-
-      console.log('📊 Admin: Updating to status:', status, 'payment_status:', paymentStatus);
-
+      // Simple approach: only update the order status field
+      // Don't touch payment_status to avoid constraint violations
       const { data, error } = await supabase
         .from("orders")
         .update({
           status: status,
-          payment_status: paymentStatus,
         })
         .eq("id", orderId)
         .select();
