@@ -51,17 +51,7 @@ export function PaymentVerificationModal({
     
     try {
       setVerificationStatus('submitted');
-      
-      // Simulate progress
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      setProgress(0);
       
       // Send notification to admins
       await notifications.createAdminNotification(
@@ -71,16 +61,22 @@ export function PaymentVerificationModal({
         `/admin/orders?order=${orderNumber}`
       );
       
-      // Complete the progress animation
-      setTimeout(() => {
-        clearInterval(interval);
-        setProgress(100);
-        setVerificationStatus('verified');
-        // Don't auto-call onPaymentVerified - let user control when to proceed
-      }, 2000);
+      // Show progress animation
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setVerificationStatus('verified');
+            return 100;
+          }
+          return prev + 20;
+        });
+      }, 300);
+      
     } catch (error) {
       console.error('Error submitting payment verification:', error);
       setVerificationStatus('pending');
+      setProgress(0);
     }
   };
 

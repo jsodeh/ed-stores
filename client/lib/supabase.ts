@@ -1426,8 +1426,26 @@ export const admin = {
     try {
       console.log('📊 Admin: Updating order status:', orderId, status);
 
-      // Simple approach: only update the order status field
-      // Don't touch payment_status to avoid constraint violations
+      // Try using RPC first (in case there's a stored procedure)
+      try {
+        console.log('📊 Admin: Attempting RPC update_order_status...');
+        const { data: rpcData, error: rpcError } = await (supabase as any)
+          .rpc('update_order_status', {
+            order_id: orderId,
+            new_status: status
+          });
+
+        if (!rpcError) {
+          console.log('✅ Admin order status updated via RPC:', rpcData);
+          return { data: rpcData, error: null };
+        }
+        
+        console.log('📊 Admin: RPC not available, trying direct update...');
+      } catch (rpcErr) {
+        console.log('📊 Admin: RPC failed, trying direct update...');
+      }
+
+      // Fallback to direct table update
       const { data, error } = await supabase
         .from("orders")
         .update({
@@ -1438,6 +1456,13 @@ export const admin = {
 
       if (error) {
         console.error("❌ Admin order status update error:", error);
+        
+        // If it's a permission error, try with service role approach
+        if (error.message?.includes('permission') || error.message?.includes('policy')) {
+          console.log('📊 Admin: Permission error detected, this might be an RLS policy issue');
+          return { data: null, error: new Error("Permission denied. Admin user may not have proper permissions to update orders. Please check RLS policies.") };
+        }
+        
         return { data: null, error: normalizeError(error) };
       }
 
