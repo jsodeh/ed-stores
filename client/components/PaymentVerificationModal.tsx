@@ -71,13 +71,13 @@ export function PaymentVerificationModal({
         `/admin/orders?order=${orderNumber}`
       );
       
-      // Simulate verification process (in a real app, this would be handled by admin action)
+      // Complete the progress animation
       setTimeout(() => {
         clearInterval(interval);
         setProgress(100);
         setVerificationStatus('verified');
-        onPaymentVerified();
-      }, 3000);
+        // Don't auto-call onPaymentVerified - let user control when to proceed
+      }, 2000);
     } catch (error) {
       console.error('Error submitting payment verification:', error);
       setVerificationStatus('pending');
@@ -140,16 +140,16 @@ export function PaymentVerificationModal({
           <div className="space-y-6 text-center">
             <Clock className="h-12 w-12 text-yellow-500 mx-auto" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">Verification Request Submitted</h3>
+              <h3 className="text-lg font-semibold mb-2">Submitting Verification Request</h3>
               <p className="text-gray-600 mb-4">
-                Your payment verification request has been sent to our team.
+                Please wait while we submit your payment verification request...
               </p>
             </div>
             
             <div className="space-y-2">
               <Progress value={progress} className="w-full" />
               <p className="text-sm text-gray-600">
-                {progress < 100 ? 'Verifying payment...' : 'Verification complete!'}
+                {progress < 100 ? 'Submitting request...' : 'Request submitted successfully!'}
               </p>
             </div>
           </div>
@@ -160,18 +160,36 @@ export function PaymentVerificationModal({
           <div className="space-y-6 text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">Payment Verified!</h3>
-              <p className="text-gray-600">
-                Your payment has been successfully verified. Your order is being processed.
+              <h3 className="text-lg font-semibold mb-2">Verification Request Submitted!</h3>
+              <p className="text-gray-600 mb-4">
+                Thank you! Your payment verification request has been submitted successfully. 
+                Our team will review and confirm your payment shortly.
               </p>
+              <div className="bg-blue-50 p-4 rounded-lg text-left">
+                <p className="text-sm text-blue-800 font-medium mb-2">What happens next?</p>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Our team will verify your payment within 24 hours</li>
+                  <li>• You'll receive an email confirmation once verified</li>
+                  <li>• Your order will then be processed for delivery</li>
+                </ul>
+              </div>
             </div>
             
-            <Button 
-              className="w-full bg-primary hover:bg-primary/90"
-              onClick={onClose}
-            >
-              Continue Shopping
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                className="flex-1 bg-primary hover:bg-primary/90"
+                onClick={onPaymentVerified}
+              >
+                View Order Details
+              </Button>
+              <Button 
+                variant="outline"
+                className="flex-1"
+                onClick={onClose}
+              >
+                Continue Shopping
+              </Button>
+            </div>
           </div>
         );
       
