@@ -536,7 +536,7 @@ export const cart = {
         .select("*")
         .eq("user_id", userId)
         .eq("product_id", productId)
-        .single();
+        .maybeSingle();
 
       if (existingItem) {
         // Update existing item quantity

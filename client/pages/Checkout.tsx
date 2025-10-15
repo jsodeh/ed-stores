@@ -471,10 +471,11 @@ export default function Checkout() {
       <PaymentVerificationModal
         isOpen={showVerificationModal}
         onClose={() => setShowVerificationModal(false)}
-        orderNumber={orderDetails?.orderNumber || ''}
-        paymentMethod={orderDetails?.paymentMethod || ''}
-        amount={orderDetails?.finalTotal || 0}
+        orderNumber={orderDetails?.order_number || ''}
+        paymentMethod={paymentMethod}
+        amount={orderDetails?.total_amount || 0}
         onPaymentVerified={handlePaymentVerified}
+        orderId={orderDetails?.id}
       />
     </div>
   );

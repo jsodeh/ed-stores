@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -10,6 +10,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { supabase, notifications } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -17,7 +18,9 @@ import {
   CheckCircle, 
   AlertCircle, 
   Clock, 
-  Send 
+  Send,
+  Eye,
+  X
 } from "lucide-react";
 
 interface PaymentVerificationModalProps {
@@ -27,6 +30,7 @@ interface PaymentVerificationModalProps {
   paymentMethod: string;
   amount: number;
   onPaymentVerified: () => void;
+  orderId?: string; // Add orderId to track order status
 }
 
 export function PaymentVerificationModal({ 
@@ -35,16 +39,78 @@ export function PaymentVerificationModal({
   orderNumber, 
   paymentMethod, 
   amount,
-  onPaymentVerified
+  onPaymentVerified,
+  orderId
 }: PaymentVerificationModalProps) {
   const { user, profile } = useAuth();
-  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'submitted' | 'verified' | 'rejected'>('pending');
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'submitted' | 'waiting_confirmation' | 'confirmed' | 'rejected'>('pending');
   const [verificationNotes, setVerificationNotes] = useState('');
   const [progress, setProgress] = useState(0);
+  const [orderStatus, setOrderStatus] = useState<string>('pending');
+  const [paymentStatus, setPaymentStatus] = useState<string>('pending');
 
   const formatPrice = (price: number) => {
     return `₦${price.toLocaleString()}.00`;
   };
+
+  // Real-time order status monitoring
+  useEffect(() => {
+    if (!orderId || !isOpen) return;
+
+    // Initial order status fetch
+    const fetchOrderStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('status, payment_status')
+          .eq('id', orderId)
+          .single();
+
+        if (data && !error) {
+          setOrderStatus(data.status);
+          setPaymentStatus(data.payment_status);
+          
+          // If order is confirmed, update verification status
+          if (data.status === 'confirmed' && verificationStatus === 'waiting_confirmation') {
+            setVerificationStatus('confirmed');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching order status:', err);
+      }
+    };
+
+    fetchOrderStatus();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel(`order-status-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${orderId}`
+        },
+        (payload) => {
+          console.log('🔄 Order status updated:', payload.new);
+          const newOrder = payload.new as any;
+          setOrderStatus(newOrder.status);
+          setPaymentStatus(newOrder.payment_status);
+          
+          // Update verification status when order is confirmed
+          if (newOrder.status === 'confirmed' && verificationStatus === 'waiting_confirmation') {
+            setVerificationStatus('confirmed');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId, isOpen, verificationStatus]);
 
   const handleSubmitVerification = async () => {
     if (!user) return;
@@ -66,7 +132,7 @@ export function PaymentVerificationModal({
         setProgress(prev => {
           if (prev >= 100) {
             clearInterval(interval);
-            setVerificationStatus('verified');
+            setVerificationStatus('waiting_confirmation');
             return 100;
           }
           return prev + 20;
@@ -151,21 +217,38 @@ export function PaymentVerificationModal({
           </div>
         );
       
-      case 'verified':
+      case 'waiting_confirmation':
         return (
           <div className="space-y-6 text-center">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+            <Clock className="h-16 w-16 text-blue-500 mx-auto" />
             <div>
               <h3 className="text-lg font-semibold mb-2">Verification Request Submitted!</h3>
               <p className="text-gray-600 mb-4">
                 Thank you! Your payment verification request has been submitted successfully. 
                 Our team will review and confirm your payment shortly.
               </p>
+              
+              {/* Live Order Status */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Order Status:</span>
+                  <Badge variant={orderStatus === 'confirmed' ? 'default' : 'secondary'}>
+                    {orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1)}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Payment Status:</span>
+                  <Badge variant={paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                    {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+              
               <div className="bg-blue-50 p-4 rounded-lg text-left">
                 <p className="text-sm text-blue-800 font-medium mb-2">What happens next?</p>
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• Our team will verify your payment within 24 hours</li>
-                  <li>• You'll receive an email confirmation once verified</li>
+                  <li>• This modal will update automatically when confirmed</li>
                   <li>• Your order will then be processed for delivery</li>
                 </ul>
               </div>
@@ -173,9 +256,11 @@ export function PaymentVerificationModal({
             
             <div className="flex gap-3">
               <Button 
-                className="flex-1 bg-primary hover:bg-primary/90"
+                variant="outline"
+                className="flex-1"
                 onClick={onPaymentVerified}
               >
+                <Eye className="h-4 w-4 mr-2" />
                 View Order Details
               </Button>
               <Button 
@@ -183,7 +268,65 @@ export function PaymentVerificationModal({
                 className="flex-1"
                 onClick={onClose}
               >
-                Continue Shopping
+                <X className="h-4 w-4 mr-2" />
+                Close
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 'confirmed':
+        return (
+          <div className="space-y-6 text-center">
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-green-700">Payment Confirmed!</h3>
+              <p className="text-gray-600 mb-4">
+                Great news! Your payment has been verified and confirmed by our team. 
+                Your order is now being processed.
+              </p>
+              
+              {/* Live Order Status */}
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-green-700">Order Status:</span>
+                  <Badge variant="default" className="bg-green-600">
+                    {orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1)}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-700">Payment Status:</span>
+                  <Badge variant="default" className="bg-green-600">
+                    Confirmed
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg text-left">
+                <p className="text-sm text-green-800 font-medium mb-2">✅ What's next?</p>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• Your order is now confirmed and being processed</li>
+                  <li>• You'll receive updates as your order progresses</li>
+                  <li>• Track your order status in the order details page</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={onPaymentVerified}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                View Order Details
+              </Button>
+              <Button 
+                variant="outline"
+                className="flex-1"
+                onClick={onClose}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Close
               </Button>
             </div>
           </div>
