@@ -55,6 +55,7 @@ export function PaymentVerificationModal({
 
   // Real-time order status monitoring
   useEffect(() => {
+    console.log('🔄 PaymentVerificationModal: isOpen changed to:', isOpen);
     if (!orderId || !isOpen) return;
 
     // Initial order status fetch
@@ -114,6 +115,8 @@ export function PaymentVerificationModal({
 
   const handleSubmitVerification = async () => {
     if (!user) return;
+    
+    console.log('🔄 PaymentVerificationModal: handleSubmitVerification called');
     
     try {
       setVerificationStatus('submitted');
@@ -356,7 +359,13 @@ export function PaymentVerificationModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      console.log('🔄 PaymentVerificationModal: Dialog onOpenChange called with:', open);
+      if (!open) {
+        console.log('🔄 PaymentVerificationModal: Calling onClose()');
+        onClose();
+      }
+    }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Payment Verification</DialogTitle>
