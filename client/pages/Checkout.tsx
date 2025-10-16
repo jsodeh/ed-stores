@@ -14,15 +14,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase, notifications, orders } from "@/lib/supabase";
-import { PaymentVerificationModal } from "@/components/PaymentVerificationModal";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Checkout() {
   const { cartItems, cartTotal, deliveryFee, finalTotal, clearCart } = useStore();
   const { user, profile, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [orderDetails, setOrderDetails] = useState<any>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -103,17 +102,6 @@ export default function Checkout() {
       // Clear cart
       clearCart();
       
-      // Show verification modal for bank transfer payments
-      if (paymentMethod === "transfer") {
-        setShowVerificationModal(true);
-        setOrderDetails(orderDetails);
-      } else {
-        // Navigate to order confirmation page for cash payments
-        navigate("/order-confirmation", {
-          state: orderDetails
-        });
-      }
-      
       // Send notification to admins
       await notifications.createAdminNotification(
         "New Order Placed",
@@ -121,17 +109,21 @@ export default function Checkout() {
         "order",
         `/admin/orders?order=${orderDetails.order_number}`
       );
+      
+      // Show success toast
+      toast({
+        title: "Order placed successfully!",
+        description: "Your order has been received and is being processed.",
+      });
+      
+      // Navigate to orders page
+      navigate("/orders");
     } catch (error) {
       console.error("Error placing order:", error);
       alert(`Failed to place order: ${error.message || "Please try again."}`);
     } finally {
       setIsPlacingOrder(false);
     }
-  };
-
-  // Handle modal close
-  const handleModalClose = () => {
-    setShowVerificationModal(false);
   };
 
   // If cart is empty, redirect to cart page
@@ -463,16 +455,6 @@ export default function Checkout() {
       </main>
       
       <BottomNavigation />
-      
-      {/* Payment Verification Modal */}
-      <PaymentVerificationModal
-        isOpen={showVerificationModal}
-        onClose={handleModalClose}
-        orderNumber={orderDetails?.order_number || ''}
-        paymentMethod={paymentMethod}
-        amount={orderDetails?.total_amount || 0}
-        orderId={orderDetails?.id}
-      />
     </div>
   );
 }
