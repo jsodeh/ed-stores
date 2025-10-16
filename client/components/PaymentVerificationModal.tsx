@@ -20,7 +20,6 @@ interface PaymentVerificationModalProps {
   orderNumber: string;
   paymentMethod: string;
   amount: number;
-  onPaymentVerified: () => void;
   orderId?: string; // Add orderId to track order status
 }
 
@@ -30,7 +29,6 @@ export function PaymentVerificationModal({
   orderNumber, 
   paymentMethod, 
   amount,
-  onPaymentVerified,
   orderId
 }: PaymentVerificationModalProps) {
   const [verificationNotes, setVerificationNotes] = useState('');
@@ -92,7 +90,7 @@ export function PaymentVerificationModal({
             <div className="flex gap-3">
               <Button 
                 className="flex-1 bg-primary hover:bg-primary/90"
-                onClick={() => console.log('Submit clicked')}
+                onClick={() => {}}
               >
                 <Send className="h-4 w-4 mr-2" />
                 Submit Verification

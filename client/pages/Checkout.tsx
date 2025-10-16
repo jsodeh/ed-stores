@@ -129,17 +129,9 @@ export default function Checkout() {
     }
   };
 
-  // Handle payment verified
-  const handlePaymentVerified = () => {
-    navigate("/order-confirmation", {
-      state: orderDetails
-    });
-  };
-
-  // Handle modal close - navigate to orders page
+  // Handle modal close
   const handleModalClose = () => {
     setShowVerificationModal(false);
-    navigate("/orders");
   };
 
   // If cart is empty, redirect to cart page
@@ -479,7 +471,6 @@ export default function Checkout() {
         orderNumber={orderDetails?.order_number || ''}
         paymentMethod={paymentMethod}
         amount={orderDetails?.total_amount || 0}
-        onPaymentVerified={handlePaymentVerified}
         orderId={orderDetails?.id}
       />
     </div>
