@@ -129,13 +129,17 @@ export function LiveSearch({ className }: LiveSearchProps) {
                 className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors text-left"
               >
                 <img 
-                  src={product.image}
+                  src={product.image_url || '/placeholder-product.jpg'}
                   alt={product.name}
                   className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder-product.jpg';
+                  }}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 truncate">{product.name}</p>
-                  <p className="text-sm text-gray-500 capitalize">{product.category}</p>
+                  <p className="text-sm text-gray-500 capitalize">{product.category_name || 'Uncategorized'}</p>
                 </div>
                 <div className="text-primary font-semibold">
                   {formatPrice(product.price)}

@@ -182,115 +182,178 @@ export default function AdminOrders() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{orderStats.total}</div>
-              <div className="text-sm text-gray-600">Total Orders</div>
+            <CardContent className="p-3 lg:p-4 text-center">
+              <div className="text-lg lg:text-2xl font-bold">{orderStats.total}</div>
+              <div className="text-xs lg:text-sm text-gray-600">Total Orders</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{orderStats.pending}</div>
-              <div className="text-sm text-gray-600">Pending</div>
+            <CardContent className="p-3 lg:p-4 text-center">
+              <div className="text-lg lg:text-2xl font-bold text-yellow-600">{orderStats.pending}</div>
+              <div className="text-xs lg:text-sm text-gray-600">Pending</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="sm:col-span-1 lg:col-span-1">
+            <CardContent className="p-3 lg:p-4 text-center">
+              <div className="text-lg lg:text-2xl font-bold text-blue-600">{orderStats.processing}</div>
+              <div className="text-xs lg:text-sm text-gray-600">Processing</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{orderStats.processing}</div>
-              <div className="text-sm text-gray-600">Processing</div>
+            <CardContent className="p-3 lg:p-4 text-center">
+              <div className="text-lg lg:text-2xl font-bold text-green-600">{orderStats.delivered}</div>
+              <div className="text-xs lg:text-sm text-gray-600">Delivered</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{orderStats.delivered}</div>
-              <div className="text-sm text-gray-600">Delivered</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">{orderStats.cancelled}</div>
-              <div className="text-sm text-gray-600">Cancelled</div>
+            <CardContent className="p-3 lg:p-4 text-center">
+              <div className="text-lg lg:text-2xl font-bold text-red-600">{orderStats.cancelled}</div>
+              <div className="text-xs lg:text-sm text-gray-600">Cancelled</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Orders Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Orders ({filteredOrders.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Order</th>
-                    <th className="text-left p-2">Customer</th>
-                    <th className="text-left p-2">Total</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Date</th>
-                    <th className="text-left p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        <div>
-                          <p className="font-medium">{order.order_number}</p>
-                          <p className="text-sm text-gray-600">{order.item_count} items</p>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <div>
-                          <p className="font-medium">{order.customer_name || 'Guest'}</p>
-                          <p className="text-sm text-gray-600">{order.customer_email}</p>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <span className="font-semibold">{formatPrice(order.total_amount || 0)}</span>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant={getStatusBadgeVariant(order.status || 'pending')} className="flex items-center gap-1 w-fit">
-                          {getStatusIcon(order.status || 'pending')}
-                          {order.status || 'pending'}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        <span className="text-sm text-gray-600">
-                          {order.created_at ? formatDate(order.created_at) : 'Unknown'}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => navigate(`/admin/order/${order.id}`)}
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => navigate(`/admin/order/${order.id}`)}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </td>
+        {/* Orders - Desktop Table */}
+        <div className="hidden lg:block">
+          <Card>
+            <CardHeader>
+              <CardTitle>Orders ({filteredOrders.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Order</th>
+                      <th className="text-left p-2">Customer</th>
+                      <th className="text-left p-2">Total</th>
+                      <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">Date</th>
+                      <th className="text-left p-2">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order) => (
+                      <tr key={order.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2">
+                          <div>
+                            <p className="font-medium">{order.order_number}</p>
+                            <p className="text-sm text-gray-600">{order.item_count} items</p>
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <div>
+                            <p className="font-medium">{order.customer_name || 'Guest'}</p>
+                            <p className="text-sm text-gray-600">{order.customer_email}</p>
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <span className="font-semibold">{formatPrice(order.total_amount || 0)}</span>
+                        </td>
+                        <td className="p-2">
+                          <Badge variant={getStatusBadgeVariant(order.status || 'pending')} className="flex items-center gap-1 w-fit">
+                            {getStatusIcon(order.status || 'pending')}
+                            {order.status || 'pending'}
+                          </Badge>
+                        </td>
+                        <td className="p-2">
+                          <span className="text-sm text-gray-600">
+                            {order.created_at ? formatDate(order.created_at) : 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => navigate(`/admin/order/${order.id}`)}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => navigate(`/admin/order/${order.id}`)}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Orders - Mobile Cards */}
+        <div className="lg:hidden">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold">Orders ({filteredOrders.length})</h3>
+          </div>
+          <div className="space-y-3">
+            {filteredOrders.map((order) => (
+              <Card key={order.id} className="p-3">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-medium text-sm">{order.order_number}</h4>
+                      <p className="text-xs text-gray-500">{order.item_count} items</p>
+                    </div>
+                    <Badge variant={getStatusBadgeVariant(order.status || 'pending')} className="flex items-center gap-1 text-xs">
+                      {getStatusIcon(order.status || 'pending')}
+                      {order.status || 'pending'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-gray-500 text-xs">Customer</div>
+                      <div className="font-medium truncate">{order.customer_name || 'Guest'}</div>
+                      <div className="text-gray-500 text-xs truncate">{order.customer_email}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-gray-500 text-xs">Total</div>
+                      <div className="font-semibold text-primary">{formatPrice(order.total_amount || 0)}</div>
+                      <div className="text-gray-500 text-xs">
+                        {order.created_at ? formatDate(order.created_at) : 'Unknown'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate(`/admin/order/${order.id}`)}
+                      className="flex-1 text-xs"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate(`/admin/order/${order.id}`)}
+                      className="flex-1 text-xs"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
   );
 }

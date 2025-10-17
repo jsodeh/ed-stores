@@ -207,39 +207,39 @@ export default function AdminProducts() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 lg:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Products</p>
-                  <p className="text-2xl font-bold">{products.length}</p>
+                  <p className="text-xs lg:text-sm text-gray-600">Total Products</p>
+                  <p className="text-lg lg:text-2xl font-bold">{products.length}</p>
                 </div>
-                <Package className="h-8 w-8 text-blue-600" />
+                <Package className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 lg:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Active Products</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xs lg:text-sm text-gray-600">Active Products</p>
+                  <p className="text-lg lg:text-2xl font-bold">
                     {products.filter((p) => p.is_active).length}
                   </p>
                 </div>
-                <Eye className="h-8 w-8 text-green-600" />
+                <Eye className="h-6 w-6 lg:h-8 lg:w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
+          <Card className="sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-3 lg:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Low Stock</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xs lg:text-sm text-gray-600">Low Stock</p>
+                  <p className="text-lg lg:text-2xl font-bold">
                     {
                       products.filter(
                         (p) =>
@@ -249,104 +249,182 @@ export default function AdminProducts() {
                     }
                   </p>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-600" />
+                <AlertTriangle className="h-6 w-6 lg:h-8 lg:w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Products Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Products ({filteredProducts.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Product</th>
-                    <th className="text-left p-2">SKU</th>
-                    <th className="text-left p-2">Category</th>
-                    <th className="text-left p-2">Price</th>
-                    <th className="text-left p-2">Stock</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={product.image_url || "/placeholder.svg"}
-                            alt={product.name || ""}
-                            className="w-10 h-10 object-cover rounded"
-                          />
-                          <div>
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-gray-600">
-                              {product.sku}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <span className="font-mono text-sm">{product.sku}</span>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="outline">{product.category_name}</Badge>
-                      </td>
-                      <td className="p-2">
-                        <span className="font-semibold">
-                          {formatPrice(product.price || 0)}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <span
-                          className={`font-medium ${
-                            (product.stock_quantity || 0) <
-                            (product.low_stock_threshold || 10)
-                              ? "text-red-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {product.stock_quantity}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <Badge
-                          variant={product.is_active ? "default" : "secondary"}
-                        >
-                          {product.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(product)}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(product)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </td>
+        {/* Products - Desktop Table */}
+        <div className="hidden lg:block">
+          <Card>
+            <CardHeader>
+              <CardTitle>Products ({filteredProducts.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Product</th>
+                      <th className="text-left p-2">SKU</th>
+                      <th className="text-left p-2">Category</th>
+                      <th className="text-left p-2">Price</th>
+                      <th className="text-left p-2">Stock</th>
+                      <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => (
+                      <tr key={product.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={product.image_url || "/placeholder.svg"}
+                              alt={product.name || ""}
+                              className="w-10 h-10 object-cover rounded"
+                            />
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-gray-600">
+                                {product.sku}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <span className="font-mono text-sm">{product.sku}</span>
+                        </td>
+                        <td className="p-2">
+                          <Badge variant="outline">{product.category_name}</Badge>
+                        </td>
+                        <td className="p-2">
+                          <span className="font-semibold">
+                            {formatPrice(product.price || 0)}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          <span
+                            className={`font-medium ${
+                              (product.stock_quantity || 0) <
+                              (product.low_stock_threshold || 10)
+                                ? "text-red-600"
+                                : "text-green-600"
+                            }`}
+                          >
+                            {product.stock_quantity}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          <Badge
+                            variant={product.is_active ? "default" : "secondary"}
+                          >
+                            {product.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </td>
+                        <td className="p-2">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(product)}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(product)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Products - Mobile Cards */}
+        <div className="lg:hidden">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold">Products ({filteredProducts.length})</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} className="p-3">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={product.image_url || "/placeholder.svg"}
+                      alt={product.name || ""}
+                      className="w-12 h-12 object-cover rounded flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{product.name}</h4>
+                      <p className="text-xs text-gray-500 font-mono">{product.sku}</p>
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {product.category_name}
+                      </Badge>
+                    </div>
+                    <Badge
+                      variant={product.is_active ? "default" : "secondary"}
+                      className="text-xs"
+                    >
+                      {product.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <span className="font-semibold text-primary">
+                        {formatPrice(product.price || 0)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span
+                        className={`font-medium text-xs ${
+                          (product.stock_quantity || 0) <
+                          (product.low_stock_threshold || 10)
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        Stock: {product.stock_quantity}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(product)}
+                      className="flex-1 text-xs"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(product)}
+                      className="flex-1 text-xs text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
 
       {/* Product Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
