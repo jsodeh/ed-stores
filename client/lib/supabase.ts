@@ -1382,12 +1382,12 @@ export const admin = {
 
         if (!rpcError) {
           console.log('✅ Admin order status updated via RPC:', rpcData);
-          return { data: rpcData, error: null };
+          return { data: { id: orderId, status }, error: null };
         }
-        
-        console.log('📊 Admin: RPC not available, trying direct update...');
+
+        console.log('📊 Admin: RPC error:', rpcError, 'trying direct update...');
       } catch (rpcErr) {
-        console.log('📊 Admin: RPC failed, trying direct update...');
+        console.log('📊 Admin: RPC failed:', rpcErr, 'trying direct update...');
       }
 
       // Fallback to direct table update
@@ -1401,13 +1401,13 @@ export const admin = {
 
       if (error) {
         console.error("❌ Admin order status update error:", error);
-        
+
         // If it's a permission error, try with service role approach
         if (error.message?.includes('permission') || error.message?.includes('policy')) {
           console.log('📊 Admin: Permission error detected, this might be an RLS policy issue');
           return { data: null, error: new Error("Permission denied. Admin user may not have proper permissions to update orders. Please check RLS policies.") };
         }
-        
+
         return { data: null, error: normalizeError(error) };
       }
 

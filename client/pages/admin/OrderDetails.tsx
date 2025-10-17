@@ -6,15 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase, orders, notifications } from "@/lib/supabase";
-import { Order } from "@shared/database.types";
+import { supabase, admin, notifications } from "@/lib/supabase";
+import { Order, OrderItem } from "@shared/database.types";
+
+// Extended order type with order items
+interface OrderWithItems extends Order {
+  order_items?: (OrderItem & {
+    products?: {
+      id: string;
+      name: string;
+      image_url: string;
+      price: number;
+    };
+  })[];
+}
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, MapPin, Phone, Send } from "lucide-react";
 
 export default function AdminOrderDetails() {
   const navigate = useNavigate();
   const { orderId } = useParams<{ orderId: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [newStatus, setNewStatus] = useState("");
@@ -109,7 +121,7 @@ export default function AdminOrderDetails() {
     setUpdating(true);
     try {
       // Update order status
-      const { data, error } = await orders.updateOrderStatus(order.id!, newStatus);
+      const { data, error } = await admin.updateOrderStatus(order.id!, newStatus as any);
       if (error) throw error;
 
       // Update local state
