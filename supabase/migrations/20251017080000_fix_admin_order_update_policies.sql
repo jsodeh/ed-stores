@@ -3,6 +3,9 @@
 
 -- Drop the existing generic admin policy
 DROP POLICY IF EXISTS "Admins can manage all orders" ON "public"."orders";
+DROP POLICY IF EXISTS "Admins can view all orders" ON "public"."orders";
+DROP POLICY IF EXISTS "Admins can update all orders" ON "public"."orders";
+DROP POLICY IF EXISTS "Admins can delete all orders" ON "public"."orders";
 
 -- Create specific policies for admin operations
 CREATE POLICY "Admins can view all orders" ON "public"."orders" 

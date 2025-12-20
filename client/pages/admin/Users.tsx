@@ -72,7 +72,8 @@ export default function AdminUsers() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update status');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update status');
       }
 
       toast({
