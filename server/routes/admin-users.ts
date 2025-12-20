@@ -46,7 +46,7 @@ export const handleAdminUsers: RequestHandler = async (req, res) => {
 
     const { data, error } = await supabase
       .from("user_profiles")
-      .select("id, full_name, email, phone, role, created_at")
+      .select("id, full_name, email, phone, role, created_at, whatsapp_enabled")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -58,3 +58,45 @@ export const handleAdminUsers: RequestHandler = async (req, res) => {
     res.status(500).json({ error: e?.message || "Internal server error" });
   }
 };
+
+export const handleToggleWhatsapp: RequestHandler = async (req, res) => {
+  try {
+    const token = getBearerToken(req.headers.authorization);
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    // Validate Status: Super Admin Only
+    const { data: authUser, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !authUser?.user) return res.status(401).json({ error: "Invalid session" });
+
+    const { data: caller, error: callerErr } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", authUser.user.id)
+      .single();
+
+    if (callerErr || caller?.role !== "super_admin") {
+      return res.status(403).json({ error: "Forbidden: Super Admin only" });
+    }
+
+    const { userId } = req.params;
+    const { enabled } = req.body;
+
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "Invalid body: enabled must be boolean" });
+    }
+
+    const { error: updateErr } = await supabase
+      .from("user_profiles")
+      .update({ whatsapp_enabled: enabled })
+      .eq("id", userId);
+
+    if (updateErr) {
+      return res.status(500).json({ error: updateErr.message });
+    }
+
+    res.status(200).json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+};
+

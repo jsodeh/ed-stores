@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ShareButton } from "./ui/ShareButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Minus, Plus, ShoppingCart } from "lucide-react";
@@ -41,7 +42,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
         <DialogHeader>
           <DialogTitle className="sr-only">Product Details</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {/* Product Image */}
           <div className="relative">
@@ -57,13 +58,20 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
               onClick={() => toggleFavorite(product.id!)}
             >
               <Heart
-                className={`h-5 w-5 ${
-                  isFavorite(product.id!)
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-gray-400'
-                }`}
+                className={`h-5 w-5 ${isFavorite(product.id!)
+                  ? 'fill-red-500 text-red-500'
+                  : 'text-gray-400'
+                  }`}
               />
             </Button>
+            <ShareButton
+              title={product.name || "Product"}
+              text={`Check out ${product.name} on EdStores!`}
+              url={`${window.location.origin}/product/${product.id}`}
+              className="absolute top-3 left-3 w-10 h-10 rounded-full bg-white/80 hover:bg-white"
+              variant="ghost"
+              size="icon"
+            />
           </div>
 
           {/* Product Info */}

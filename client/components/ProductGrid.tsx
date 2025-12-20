@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProductModal } from "./ProductModal";
+import { ShareButton } from "./ui/ShareButton";
 import { Product } from "@shared/database.types";
 
 export function ProductGrid() {
@@ -15,10 +16,10 @@ export function ProductGrid() {
 
   // Show all products on homepage when no category is selected, otherwise limit to 8
   const products = selectedCategory ? filteredProducts.slice(0, 8) : filteredProducts;
-  
-  console.log('🛍️ ProductGrid: Rendering with state', { 
-    loading, 
-    productsCount: products.length, 
+
+  console.log('🛍️ ProductGrid: Rendering with state', {
+    loading,
+    productsCount: products.length,
     filteredProductsCount: filteredProducts.length,
     selectedCategory
   });
@@ -90,13 +91,20 @@ export function ProductGrid() {
                   onClick={(e) => handleToggleFavorite(product.id || "", e)}
                 >
                   <Heart
-                    className={`h-4 w-4 ${
-                      isFavorite(product.id || "")
-                        ? "fill-red-500 text-red-500"
-                        : "text-gray-400"
-                    }`}
+                    className={`h-4 w-4 ${isFavorite(product.id || "")
+                      ? "fill-red-500 text-red-500"
+                      : "text-gray-400"
+                      }`}
                   />
                 </Button>
+                <ShareButton
+                  title={product.name || "Product"}
+                  text={`Check out ${product.name} on EdStores!`}
+                  url={`${window.location.origin}/product/${product.id}`}
+                  className="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/80 hover:bg-white"
+                  variant="ghost"
+                  size="icon"
+                />
               </div>
 
               <div>

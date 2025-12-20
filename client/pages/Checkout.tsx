@@ -12,7 +12,7 @@ import { ArrowLeft, MapPin, Phone, Mail, User, CreditCard } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import React, { useState } from "react";
 import { supabase, notifications, orders } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,7 +22,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     fullName: profile?.full_name || user?.user_metadata?.full_name || "",
@@ -34,7 +34,7 @@ export default function Checkout() {
     postalCode: "",
     deliveryNotes: "",
   });
-  
+
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState("transfer");
 
@@ -56,13 +56,13 @@ export default function Checkout() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsPlacingOrder(true);
-    
+
     try {
       // Validate required fields
       if (!formData.address || !formData.city || !formData.state) {
         throw new Error("Please fill in all required address fields");
       }
-      
+
       // Create address record first
       const { data: addressData, error: addressError } = await supabase
         .from("addresses")
@@ -77,9 +77,9 @@ export default function Checkout() {
         })
         .select()
         .single();
-      
+
       if (addressError) throw addressError;
-      
+
       // Create order from cart using the stored procedure
       const { data: orderData, error: orderError } = await orders.createFromCart(
         user?.id || "",
@@ -87,35 +87,42 @@ export default function Checkout() {
         formData.deliveryNotes || "",
         paymentMethod
       );
-      
+
       if (orderError) throw orderError;
-      
+
       // Get the created order details
       const { data: orderDetails, error: orderDetailsError } = await supabase
         .from("order_details")
         .select("*")
         .eq("id", orderData)
         .single();
-      
+
       if (orderDetailsError) throw orderDetailsError;
-      
+
       // Clear cart
       clearCart();
-      
+
       // Send notification to admins
-      await notifications.createAdminNotification(
-        "New Order Placed",
-        `User ${profile?.full_name || user?.email || 'Guest'} placed a new order (${orderDetails.order_number}) with ${cartItems.length} items. Total: ${formatPrice(orderDetails.total_amount)}. Payment method: ${paymentMethod}.`,
-        "order",
-        `/admin/orders?order=${orderDetails.order_number}`
-      );
-      
+      try {
+        await fetch("/api/notifications/order-created", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          },
+          body: JSON.stringify({ orderNumber: orderDetails.order_number }),
+        });
+      } catch (notifyError) {
+        console.error("Failed to send notification:", notifyError);
+        // Don't block success flow if notification fails
+      }
+
       // Show success toast
       toast({
         title: "Order placed successfully!",
         description: "Your order has been received and is being processed.",
       });
-      
+
       // Navigate to orders page
       navigate("/orders");
     } catch (error) {
@@ -138,12 +145,12 @@ export default function Checkout() {
       <div className="md:hidden">
         <Header />
       </div>
-      
+
       <main className="max-w-6xl mx-auto p-4 pb-20 md:pb-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
             className="md:hidden"
@@ -383,9 +390,9 @@ export default function Checkout() {
                     </div>
                   ))}
                 </div>
-                
+
                 <Separator className="my-4" />
-                
+
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
@@ -401,22 +408,22 @@ export default function Checkout() {
                     </div>
                   )}
                 </div>
-                
+
                 <Separator className="my-4" />
-                
+
                 <div className="flex justify-between text-lg font-bold text-gray-900 mb-6">
                   <span>Total</span>
                   <span className="text-primary">{formatPrice(finalTotal)}</span>
                 </div>
-                
-                <Button 
+
+                <Button
                   className="w-full bg-primary hover:bg-primary/90 py-3"
                   onClick={handlePlaceOrder}
                   disabled={isPlacingOrder}
                 >
                   {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
                 </Button>
-                
+
                 <div className="mt-4 space-y-2 text-xs text-gray-500">
                   <p>• By placing your order, you agree to our terms and conditions</p>
                   <p>• Secure checkout</p>
@@ -424,7 +431,7 @@ export default function Checkout() {
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Membership Benefits Notice */}
             {!isAuthenticated && (
               <Card className="mt-4">
@@ -438,8 +445,8 @@ export default function Checkout() {
                       <p className="text-sm text-gray-600 mt-1">
                         Get discounts, stock alerts, loyalty bonuses, and payment on delivery.
                       </p>
-                      <Button 
-                        variant="link" 
+                      <Button
+                        variant="link"
                         className="p-0 mt-2 h-auto text-primary"
                         onClick={() => navigate("/")}
                       >
@@ -453,7 +460,7 @@ export default function Checkout() {
           </div>
         </div>
       </main>
-      
+
       <BottomNavigation />
     </div>
   );
