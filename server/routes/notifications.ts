@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { createClient } from "@supabase/supabase-js";
-import { Database } from "@shared/database.types";
+import { Database } from "../../shared/database.types";
 import { WhatsAppService } from "../services/whatsapp";
 
 const supabase = createClient<Database>(

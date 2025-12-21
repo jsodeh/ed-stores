@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { createClient } from "@supabase/supabase-js";
-import { Database } from "@shared/database.types";
+import { Database } from "../../shared/database.types";
 
 const supabase = createClient<Database>(
   process.env.VITE_SUPABASE_URL || "",
