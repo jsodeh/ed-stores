@@ -3,9 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { Database } from "../../shared/database.types";
 import { WhatsAppService } from "../services/whatsapp";
 
-const supabase = createClient<Database>(
-    process.env.SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+const getSupabase = () => createClient<Database>(
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "",
 );
 
 function getBearerToken(authHeader?: string) {
@@ -21,6 +21,8 @@ export const handleOrderCreatedNotification: RequestHandler = async (req, res) =
         if (!token) {
             return res.status(401).json({ error: "Unauthorized" });
         }
+
+        const supabase = getSupabase();
 
         // Verify user is authenticated
         const { data: authUser, error: authErr } = await supabase.auth.getUser(token);
