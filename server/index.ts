@@ -6,6 +6,8 @@ import { handleDemo } from "./routes/demo";
 import { handleGetProfile } from "./routes/profile";
 import { handleAdminUsers } from "./routes/admin-users";
 import { handleAdminOrders } from "./routes/admin-orders";
+import { handleToggleWhatsapp } from "./routes/admin-users";
+import { handleOrderCreatedNotification } from "./routes/notifications";
 import fs from "fs";
 
 export function createServer() {
@@ -29,17 +31,13 @@ export function createServer() {
 
   // Admin: list all users
   app.get("/api/admin/users", handleAdminUsers);
-  app.patch("/api/admin/users/:userId/whatsapp", (req, res, next) => {
-    import("./routes/admin-users").then(m => m.handleToggleWhatsapp(req, res, next)).catch(next);
-  });
+  app.patch("/api/admin/users/:userId/whatsapp", handleToggleWhatsapp);
 
   // Admin: list orders (view)
   app.get("/api/admin/orders", handleAdminOrders);
 
   // Notifications
-  app.post("/api/notifications/order-created", (req, res, next) => {
-    import("./routes/notifications").then(m => m.handleOrderCreatedNotification(req, res, next)).catch(next);
-  });
+  app.post("/api/notifications/order-created", handleOrderCreatedNotification);
 
   // Serve static files - try multiple possible locations
   const possibleStaticPaths = [
