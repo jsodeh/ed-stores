@@ -29,13 +29,17 @@ export function createServer() {
 
   // Admin: list all users
   app.get("/api/admin/users", handleAdminUsers);
-  app.patch("/api/admin/users/:userId/whatsapp", import("./routes/admin-users").then(m => m.handleToggleWhatsapp) as any);
+  app.patch("/api/admin/users/:userId/whatsapp", (req, res, next) => {
+    import("./routes/admin-users").then(m => m.handleToggleWhatsapp(req, res, next)).catch(next);
+  });
 
   // Admin: list orders (view)
   app.get("/api/admin/orders", handleAdminOrders);
 
   // Notifications
-  app.post("/api/notifications/order-created", import("./routes/notifications").then(m => m.handleOrderCreatedNotification) as any);
+  app.post("/api/notifications/order-created", (req, res, next) => {
+    import("./routes/notifications").then(m => m.handleOrderCreatedNotification(req, res, next)).catch(next);
+  });
 
   // Serve static files - try multiple possible locations
   const possibleStaticPaths = [
