@@ -88,7 +88,8 @@ export function createServer() {
 
       // Initialize Supabase (dynamically to avoid top-level await issues if any)
       const { createClient } = await import("@supabase/supabase-js");
-      const { Database } = await import("@shared/database.types"); // Type-only import usually, but valid for import()
+      // Database type is not needed at runtime
+
 
       const supabase = createClient(
         process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",

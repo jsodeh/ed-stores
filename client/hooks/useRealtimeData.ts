@@ -79,7 +79,7 @@ export function useRealtimeData<T = any>({
 
     try {
       startTimeout();
-      let query = supabase.from(tableRef.current).select(selectRef.current);
+      let query = supabase.from(tableRef.current as any).select(selectRef.current);
 
       // Apply filters
       Object.entries(filterRef.current).forEach(([key, value]) => {
@@ -101,7 +101,7 @@ export function useRealtimeData<T = any>({
         throw new Error(fetchError.message);
       }
 
-      setData(fetchedData || []);
+      setData((fetchedData as unknown as T[]) || []);
     } catch (err) {
       console.error(`Error fetching ${tableRef.current}:`, err);
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -179,7 +179,7 @@ export function useAdminStats() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
-      const withTimeout = <T>(p: Promise<T>, ms = 12000): Promise<T> =>
+      const withTimeout = <T>(p: Promise<T> | PromiseLike<T>, ms = 12000): Promise<T> =>
         new Promise((resolve) => {
           let done = false;
           const t = window.setTimeout(() => {
@@ -189,7 +189,7 @@ export function useAdminStats() {
               resolve({ data: [] });
             }
           }, ms);
-          p.then((v) => {
+          Promise.resolve(p).then((v) => {
             if (!done) {
               done = true;
               window.clearTimeout(t);
@@ -304,12 +304,12 @@ export function useAdminStats() {
 
     // Set up debounced realtime subscriptions for relevant tables
     let refreshTimeout: NodeJS.Timeout | null = null;
-    
+
     const debouncedRefresh = () => {
       if (refreshTimeout) {
         clearTimeout(refreshTimeout);
       }
-      
+
       refreshTimeout = setTimeout(() => {
         console.log('🔄 Debounced refresh: Updating admin stats');
         fetchStats();

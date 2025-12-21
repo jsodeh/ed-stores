@@ -22,7 +22,7 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalProps) {
   const { signIn, signUp, loading } = useAuth();
-  const { cartItemCount, transferGuestCart } = useStore();
+  const { cartItemCount } = useStore();
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
 
   useEffect(() => {
     if (!isOpen) return;
-    
+
     // Check if there are items in guest cart
     const savedCart = localStorage.getItem("guestCart");
     if (savedCart) {
@@ -168,7 +168,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
                 </AlertDescription>
               </Alert>
             )}
-            
+
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="signin-email">Email</Label>
@@ -225,7 +225,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
                 </AlertDescription>
               </Alert>
             )}
-            
+
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="signup-name">Full Name</Label>

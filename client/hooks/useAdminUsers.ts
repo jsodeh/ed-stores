@@ -8,7 +8,7 @@ export function useAdminUsers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_profiles")
-        .select("id, full_name, email, phone, role, created_at")
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
