@@ -32,19 +32,31 @@ import { Order } from "@shared/database.types";
 
 export default function Profile() {
   const { cartItemCount, favoriteProducts, cartTotal } = useStore();
-  const { user, profile, isAuthenticated, isAdmin, signOut } = useAuth();
+  const { user, profile, isAuthenticated, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [totalSpent, setTotalSpent] = useState(0);
 
+  // Handle global auth loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-gray-500">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Redirect to sign-in if not authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       // Could navigate to sign-in page or show auth modal
       console.log("User not authenticated, should show sign-in");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loading]);
 
   // Load user orders when authenticated
   useEffect(() => {
