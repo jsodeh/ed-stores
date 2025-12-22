@@ -1,8 +1,8 @@
 import { RequestHandler } from "express";
 import { createClient } from "@supabase/supabase-js";
-import { Database } from "../../shared/database.types";
+// import { Database } from "../../shared/database.types"; (Commented out to debug build)
 
-const getSupabase = () => createClient<Database>(
+const getSupabase = () => createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "",
 );

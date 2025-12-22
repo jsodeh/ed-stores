@@ -50,30 +50,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Track the latest auth event timestamp to prevent race conditions
+  const lastEventRef = React.useRef<{ event: string, time: number } | null>(null);
+
   useEffect(() => {
     let mounted = true;
-    
+
     // Get initial session with better error handling and timeout
     const getInitialSession = async () => {
       try {
         console.log('🔄 AuthContext: Getting initial session...');
-        
+
         // Add timeout to prevent hanging on session restoration
         const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Session timeout')), 10000)
         );
-        
+
         const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        
+
         if (!mounted) return;
-        
+
+        // CRITICAL: Check if a SIGNED_IN event happened while we were waiting
+        // If the user signed in recently (within last 5 seconds), trust that state over the initial session check
+        // which might have been initiated before the sign-in completed.
+        const now = Date.now();
+        if (lastEventRef.current &&
+          lastEventRef.current.event === 'SIGNED_IN' &&
+          (now - lastEventRef.current.time) < 5000) {
+          console.log('🛑 AuthContext: Ignoring initial session result because a SIGNED_IN event occurred recently.');
+          return;
+        }
+
         if (error) {
           console.error('AuthContext: Session error:', error);
           // Handle refresh token errors by clearing the session
-          if (error.message?.includes('Invalid Refresh Token') || 
-              error.message?.includes('Refresh Token Not Found') ||
-              error.message?.includes('Session timeout')) {
+          if (error.message?.includes('Invalid Refresh Token') ||
+            error.message?.includes('Refresh Token Not Found') ||
+            error.message?.includes('Session timeout')) {
             console.log('🔄 AuthContext: Clearing invalid/timed out session');
             await supabase.auth.signOut();
             setSession(null);
@@ -81,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setProfile(null);
           }
         } else {
+          // Double check: if session is null, but we think we are signed in via other means? 
+          // No, session is source of truth.
           console.log('✅ AuthContext: Session restored:', !!session?.user);
           setSession(session);
           setUser(session?.user ?? null);
@@ -112,9 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        
+
         console.log('🔄 AuthContext: Auth state changed:', event, session?.user?.id);
-        
+        lastEventRef.current = { event, time: Date.now() };
+
         // Handle specific auth events
         if (event === 'SIGNED_OUT') {
           console.log('👋 AuthContext: User signed out');
@@ -132,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('👋 AuthContext: User signed in');
           setSession(session);
           setUser(session?.user ?? null);
-          
+
           if (session?.user) {
             // Load profile in background, don't block auth completion
             loadUserProfile(session.user.id).catch(err => {
@@ -143,6 +160,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (event === 'INITIAL_SESSION') {
           console.log('🔄 AuthContext: Initial session event');
           // This event is handled by getInitialSession, just update state
+          // BUT: if session is null, and we just SIGNED_IN? 
+          // Supabase usually sends INITIAL_SESSION right on subscription.
+          // We should trust the session provided here.
+
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
@@ -167,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('AuthContext: Loading profile for user:', userId);
       const { data, error } = await profiles.getProfile(userId);
       console.log('AuthContext: Profile loaded:', { data, error });
-      
+
       if (error) {
         console.error('AuthContext: Error loading profile:', error);
         setProfile(null);
@@ -175,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setProfile(data);
-      
+
       // Store admin status for persistence
       if (data?.role && (data.role === 'admin' || data.role === 'super_admin')) {
         localStorage.setItem('userIsAdmin', 'true');
@@ -331,14 +352,14 @@ export function AuthGuard({
 
   // Add timeout for loading state to prevent infinite loops
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  
+
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         console.warn('⚠️ AuthGuard: Loading timeout reached, proceeding without auth check');
         setLoadingTimeout(true);
       }, 5000); // 5 seconds timeout
-      
+
       return () => clearTimeout(timer);
     } else {
       setLoadingTimeout(false);
