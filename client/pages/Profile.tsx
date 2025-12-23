@@ -65,7 +65,7 @@ export default function Profile() {
     } else {
       setOrdersLoading(false);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id]);
 
   const loadUserOrders = async () => {
     if (!user) return;
